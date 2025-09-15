@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { build } from 'esbuild'
-import { existsSync, mkdirSync, writeFileSync, cpSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync, cpSync, readFileSync, readdirSync, statSync, chmodSync, rmSync } from 'node:fs'
 import { join, extname, dirname } from 'node:path'
 
 const SRC_DIR = 'src'
@@ -89,6 +89,87 @@ import('./entrypoints/cli.js').catch(err => {
   process.exit(1);
 });
 `)
+  chmodSync(mainEntrypoint, 0o755)
+
+  // Create smart CLI wrapper at repo root that prefers dist -> bun -> node+tsx
+  try {
+    // Clean any previous wrapper/npmrc
+    if (existsSync('cli.js')) rmSync('cli.js', { force: true })
+    if (existsSync('.npmrc')) rmSync('.npmrc', { force: true })
+
+    const wrapper = `#!/usr/bin/env node
+
+const { spawn, execSync } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+
+const args = process.argv.slice(2);
+const cliTsx = path.join(__dirname, 'src', 'entrypoints', 'cli.tsx');
+const distCli = path.join(__dirname, 'dist', 'entrypoints', 'cli.js');
+
+function runNode(file) {
+  const child = spawn(process.execPath, [file, ...args], {
+    stdio: 'inherit',
+    env: { ...process.env, YOGA_WASM_PATH: path.join(__dirname, 'yoga.wasm') },
+  });
+  child.on('exit', (code) => process.exit(code || 0));
+  child.on('error', () => process.exit(1));
+}
+
+// 1) Prefer compiled dist if present
+if (fs.existsSync(distCli)) {
+  runNode(distCli);
+} else {
+  // 2) Try bun
+  try {
+    execSync('bun --version', { stdio: 'ignore' });
+    const child = spawn('bun', ['run', cliTsx, ...args], {
+      stdio: 'inherit',
+      env: { ...process.env, YOGA_WASM_PATH: path.join(__dirname, 'yoga.wasm') },
+    });
+    child.on('exit', (code) => process.exit(code || 0));
+    child.on('error', runWithTsx);
+  } catch (_) {
+    runWithTsx();
+  }
+}
+
+function runWithTsx() {
+  const binDir = path.join(__dirname, 'node_modules', '.bin');
+  const tsxLocal = process.platform === 'win32' ? path.join(binDir, 'tsx.cmd') : path.join(binDir, 'tsx');
+
+  // Try local tsx first
+  const child = spawn(tsxLocal, [cliTsx, ...args], {
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+    env: { ...process.env, YOGA_WASM_PATH: path.join(__dirname, 'yoga.wasm'), TSX_TSCONFIG_PATH: process.platform === 'win32' ? 'noop' : undefined },
+  });
+  child.on('error', () => {
+    // Fallback to PATH tsx
+    const child2 = spawn('tsx', [cliTsx, ...args], {
+      stdio: 'inherit',
+      shell: process.platform === 'win32',
+      env: { ...process.env, YOGA_WASM_PATH: path.join(__dirname, 'yoga.wasm'), TSX_TSCONFIG_PATH: process.platform === 'win32' ? 'noop' : undefined },
+    });
+    child2.on('error', () => {
+      console.error('\nError: tsx is required but not found.');
+      console.error('Please install tsx globally: npm i -g tsx');
+      process.exit(1);
+    });
+    child2.on('exit', (code) => process.exit(code || 0));
+  });
+  child.on('exit', (code) => process.exit(code || 0));
+}
+`
+
+    writeFileSync('cli.js', wrapper)
+    chmodSync('cli.js', 0o755)
+
+    // Create a minimal .npmrc for publishing compatibility
+    writeFileSync('.npmrc', `auto-install-peers=true\n`)
+  } catch (err) {
+    console.warn('⚠️  Could not create CLI wrapper:', err.message)
+  }
 
   // Copy yoga.wasm alongside outputs
   try {
@@ -100,7 +181,7 @@ import('./entrypoints/cli.js').catch(err => {
 
   console.log('✅ Build completed for cross-platform compatibility!')
   console.log('📋 Generated files:')
-  console.log('  - dist/ (CommonJS modules)')
+  console.log('  - dist/ (ESM modules)')
   console.log('  - dist/index.js (main entrypoint)')
   console.log('  - dist/entrypoints/cli.js (CLI main)')
   console.log('  - cli.js (cross-platform wrapper)')
