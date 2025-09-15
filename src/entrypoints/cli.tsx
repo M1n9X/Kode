@@ -65,7 +65,6 @@ import { checkHasTrustDialogAccepted, McpServerConfig } from '../utils/config'
 import { isDefaultSlowAndCapableModel } from '../utils/model'
 import { TrustDialog } from '../components/TrustDialog'
 import { Onboarding } from '../components/Onboarding'
-import { Onboarding } from '../components/Onboarding'
 import { startMCPServer } from './mcp'
 import { env } from '../utils/env'
 import { getCwd, setCwd, setOriginalCwd } from '../utils/state'
@@ -803,6 +802,37 @@ ${commandList}`,
         }
       }
       process.exit(0)
+    })
+
+  mcp
+    .command('health')
+    .description('Check connectivity of configured MCP servers')
+    .action(async () => {
+      try {
+        const clients = await getClients()
+        if (clients.length === 0) {
+          console.log('No MCP servers found or connections skipped in CI environment.')
+          process.exit(0)
+        }
+
+        for (const c of clients) {
+          if (c.type === 'connected') {
+            try {
+              // Try listing tools as a basic capability check
+              await c.client.listTools()
+              console.log(`✅ ${c.name}: healthy`)
+            } catch (err) {
+              console.log(`⚠️  ${c.name}: connected, tool listing failed (${(err as Error).message})`)
+            }
+          } else {
+            console.log(`❌ ${c.name}: connection failed`)
+          }
+        }
+        process.exit(0)
+      } catch (error) {
+        console.error(`Error during MCP health check: ${(error as Error).message}`)
+        process.exit(1)
+      }
     })
 
   mcp

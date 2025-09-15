@@ -30,6 +30,7 @@
   ],
   "scripts": {
     "dev": "bun run ./src/entrypoints/cli.tsx --verbose",
+    "dev:node": "tsx ./src/entrypoints/cli.tsx --verbose",
     "build": "node scripts/build.mjs",
     "clean": "rm -rf cli.js",
     "prepublishOnly": "node scripts/build.mjs && node scripts/prepublish-check.js",

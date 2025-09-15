@@ -220,6 +220,36 @@ You can use the onboarding to set up the model, or `/model`.
 If you don't see the models you want on the list, you can manually set them in `/config`
 As long as you have an openai-like endpoint, it should work.
 
+### MCP Servers (Model Context Protocol)
+
+Kode both runs as an MCP client and can expose its own tools as an MCP server for other apps (e.g., Claude Desktop).
+
+- List configured servers: `kode mcp list`
+- Add stdio server: `kode mcp add <name> <command> [args...]`
+- Add SSE server: `kode mcp add <name> <url>`
+- Add from JSON: `kode mcp add-json <name> '{"type": "sse", "url": "https://example"}'`
+- Show details: `kode mcp get <name>`
+- Remove server: `kode mcp remove <name>`
+- Import from Claude Desktop: `kode mcp add-from-claude-desktop`
+- Start Kode as an MCP server (stdio): `kode mcp serve`
+- Health check: `kode mcp health`
+
+To connect Kode to Claude Desktop, add an entry to Claude Desktop’s config under `mcpServers`:
+
+```json
+{
+  "mcpServers": {
+    "kode": {
+      "type": "stdio",
+      "command": "/usr/local/bin/kode",
+      "args": ["mcp", "serve"]
+    }
+  }
+}
+```
+
+Find the path with `which kode` (macOS/Linux) or `where kode` (Windows). You can also reset local project-scoped approvals any time: `kode mcp reset-project-choices`.
+
 ### Commands
 
 - `/help` - Show available commands
@@ -383,6 +413,9 @@ bun install
 
 # Run in development mode
 bun run dev
+
+# Alternative Node-based dev (no Bun required)
+npm run dev:node
 ```
 
 ### Build
@@ -399,6 +432,29 @@ bun test
 
 # Test the CLI
 ./cli.js --help
+```
+
+### Safe Mode and Permissions
+
+Kode defaults to a permissive “YOLO” mode to maximize productivity. For sensitive work, enable safe mode to require approvals for tool actions:
+
+```bash
+kode --safe
+```
+
+You can toggle per run. Default safety profiles and additional modes are planned; for now, use `--safe` as needed.
+
+### Proxy and Platform Notes
+
+- Proxy: Set standard environment variables such as `HTTP_PROXY`, `HTTPS_PROXY`, or `ALL_PROXY` before launching Kode to proxy API and HTTP traffic.
+- Windows: Prefer Git Bash or WSL for the best experience; VS Code integrated terminal is recommended. Ensure your global npm prefix has no spaces to avoid shim issues.
+
+### Wrapper Debugging
+
+If you run into path issues (global installs, symlinks), enable wrapper debug output:
+
+```bash
+KODE_WRAPPER_DEBUG=1 kode --version
 ```
 
 ## Contributing

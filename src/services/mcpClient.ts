@@ -21,6 +21,7 @@ import {
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import {
   CallToolResultSchema,
   ClientRequest,
@@ -225,18 +226,37 @@ async function connectToServer(
   name: string,
   serverRef: McpServerConfig,
 ): Promise<Client> {
-  const transport =
-    serverRef.type === 'sse'
-      ? new SSEClientTransport(new URL(serverRef.url))
-      : new StdioClientTransport({
-          command: serverRef.command,
-          args: serverRef.args,
-          env: {
-            ...process.env,
-            ...serverRef.env,
-          } as Record<string, string>,
-          stderr: 'pipe', // prevents error output from the MCP server from printing to the UI
-        })
+  // Choose transport with HTTP fallback for SSE-style URLs
+  let transport: StdioClientTransport | SSEClientTransport | StreamableHTTPClientTransport
+
+  if (serverRef.type === 'sse') {
+    const baseUrl = new URL(serverRef.url)
+    // Try Streamable HTTP first, then fall back to SSE
+    try {
+      const httpTransport = new StreamableHTTPClientTransport(new URL(baseUrl))
+      const client = new Client(
+        { name: PRODUCT_COMMAND, version: '0.1.0' },
+        { capabilities: {} },
+      )
+      // Race connection here to validate; if it fails, fall back below
+      await client.connect(httpTransport)
+      // If connected, return the client directly
+      return client
+    } catch {
+      // Fall back to SSE transport
+      transport = new SSEClientTransport(baseUrl)
+    }
+  } else {
+    transport = new StdioClientTransport({
+      command: serverRef.command,
+      args: serverRef.args,
+      env: {
+        ...process.env,
+        ...serverRef.env,
+      } as Record<string, string>,
+      stderr: 'pipe', // prevents error output from the MCP server from printing to the UI
+    })
+  }
 
   const client = new Client(
     {
