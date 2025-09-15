@@ -51,6 +51,7 @@ interface ExtendedToolUseContext extends ToolUseContext {
     tools: Tool[]
     verbose: boolean
     safeMode: boolean
+    permissionMode?: import('./types/PermissionMode').PermissionMode
     maxThinkingTokens: number
     isKodingRequest?: boolean
     model?: string | import('./utils/config').ModelPointerType

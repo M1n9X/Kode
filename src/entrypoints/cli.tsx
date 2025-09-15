@@ -81,6 +81,7 @@ import {
   addMcpServer,
   getMcpServer,
   listMCPServers,
+  listScopedMcpServers,
   parseEnvVars,
   removeMcpServer,
   getClients,
@@ -383,6 +384,11 @@ ${commandList}`,
     )
     .option('-e, --enable-architect', 'Enable the Architect tool', () => true)
     .option(
+      '--mode <mode>',
+      'Permission mode: default|accept-edits|plan|bypass',
+      (value: string) => String(value),
+    )
+    .option(
       '-p, --print',
       'Print response and exit (useful for pipes)',
       () => true,
@@ -393,7 +399,7 @@ ${commandList}`,
       () => true,
     )
     .action(
-      async (prompt, { cwd, debug, verbose, enableArchitect, print, safe }) => {
+      async (prompt, { cwd, debug, verbose, enableArchitect, print, safe, mode }) => {
         await showSetupScreens(safe, print)
         
         await setup(cwd, safe)
@@ -408,6 +414,23 @@ ${commandList}`,
         ])
         // logStartup()
         const inputPrompt = [prompt, stdinContent].filter(Boolean).join('\n')
+        const normalizeMode = (m?: string) => {
+          const v = (m || '').toLowerCase()
+          switch (v) {
+            case 'accept-edits':
+            case 'acceptedits':
+              return 'acceptEdits' as const
+            case 'plan':
+              return 'plan' as const
+            case 'bypass':
+            case 'bypass-permissions':
+              return 'bypassPermissions' as const
+            case 'default':
+            default:
+              return 'default' as const
+          }
+        }
+
         if (print) {
           if (!inputPrompt) {
             console.error(
@@ -456,6 +479,7 @@ ${commandList}`,
               verbose={verbose}
               tools={tools}
               safeMode={safe}
+              initialPermissionMode={normalizeMode(mode)}
               mcpClients={mcpClients}
               isDefaultModel={isDefaultModel}
               initialUpdateVersion={updateInfo.version}
@@ -786,19 +810,21 @@ ${commandList}`,
   mcp
     .command('list')
     .description('List configured MCP servers')
-    .action(() => {
-      const servers = listMCPServers()
-      if (Object.keys(servers).length === 0) {
+    .option('-s, --scope <scope>', 'Filter by scope (project, global, or mcprc)')
+    .action((opts: { scope?: string }) => {
+      const s = opts?.scope ? ensureConfigScope(opts.scope) : undefined
+      const scoped = listScopedMcpServers(s)
+      if (scoped.length === 0) {
         console.log(
           `No MCP servers configured. Use \`${PRODUCT_COMMAND} mcp add\` to add a server.`,
         )
-      } else {
-        for (const [name, server] of Object.entries(servers)) {
-          if (server.type === 'sse') {
-            console.log(`${name}: ${server.url} (SSE)`)
-          } else {
-            console.log(`${name}: ${server.command} ${server.args.join(' ')}`)
-          }
+        process.exit(0)
+      }
+      for (const { name, scope, server } of scoped) {
+        if (server.type === 'sse') {
+          console.log(`${name} [${scope}]: ${server.url} (SSE/HTTP)`) 
+        } else {
+          console.log(`${name} [${scope}]: ${server.command} ${(server.args || []).join(' ')}`)
         }
       }
       process.exit(0)
@@ -1339,7 +1365,8 @@ ${commandList}`,
       'Enable strict permission checking mode (default is permissive)',
       () => true,
     )
-    .action(async (identifier, { cwd, enableArchitect, safe, verbose }) => {
+    .option('--mode <mode>', 'Permission mode: default|accept-edits|plan|bypass')
+    .action(async (identifier, { cwd, enableArchitect, safe, verbose, mode }) => {
       await setup(cwd, safe)
       assertMinVersion()
 
@@ -1396,6 +1423,7 @@ ${commandList}`,
               commands={commands}
               tools={tools}
               safeMode={safe}
+              initialPermissionMode={(mode && mode.toLowerCase().startsWith('accept')) ? 'acceptEdits' : (mode === 'plan' ? 'plan' : (mode === 'bypass' ? 'bypassPermissions' : 'default'))}
               initialMessages={messages}
               mcpClients={mcpClients}
               isDefaultModel={isDefaultModel}

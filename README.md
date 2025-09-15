@@ -442,7 +442,22 @@ Kode defaults to a permissive “YOLO” mode to maximize productivity. For sens
 kode --safe
 ```
 
-You can toggle per run. Default safety profiles and additional modes are planned; for now, use `--safe` as needed.
+You can also select a permission mode per run:
+
+```bash
+# Read-only planning (blocks write tools)
+kode --mode plan
+
+# Auto-approve edits while keeping prompts gated for other tools
+kode --mode accept-edits --safe
+
+# Fully bypass checks (equivalent to YOLO)
+kode --mode bypass
+```
+
+Notes:
+- `--mode` controls high-level behavior; combine with `--safe` to enforce confirmations for non-edit tools.
+- When unset, mode is `default`.
 
 ### Proxy and Platform Notes
 

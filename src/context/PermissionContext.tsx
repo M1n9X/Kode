@@ -28,15 +28,17 @@ const PermissionContext = createContext<PermissionContextValue | undefined>(
 interface PermissionProviderProps {
   children: ReactNode
   isBypassPermissionsModeAvailable?: boolean
+  initialMode?: PermissionMode
 }
 
 export function PermissionProvider({
   children,
   isBypassPermissionsModeAvailable = false,
+  initialMode,
 }: PermissionProviderProps) {
   const [permissionContext, setPermissionContext] =
     useState<IPermissionContext>({
-      mode: 'default',
+      mode: initialMode ?? 'default',
       allowedTools: ['*'],
       allowedPaths: [process.cwd()],
       restrictions: {

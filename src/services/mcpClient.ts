@@ -197,6 +197,42 @@ export function listMCPServers(): Record<string, McpServerConfig> {
   }
 }
 
+export type ScopedServer = {
+  name: string
+  scope: ConfigScope
+  server: McpServerConfig
+}
+
+export function listScopedMcpServers(
+  scope?: ConfigScope,
+): ScopedServer[] {
+  const results: ScopedServer[] = []
+  const globalServers = getGlobalConfig().mcpServers ?? {}
+  const mcprcServers = getMcprcConfig() ?? {}
+  const projectServers = getCurrentProjectConfig().mcpServers ?? {}
+
+  const pushAll = (
+    entries: [string, McpServerConfig][],
+    s: ConfigScope,
+  ) => {
+    for (const [name, server] of entries) {
+      if (!scope || scope === s) {
+        results.push({ name, scope: s, server })
+      }
+    }
+  }
+
+  // Order: global -> mcprc -> project, but project has highest precedence
+  pushAll(Object.entries(globalServers), 'global')
+  pushAll(Object.entries(mcprcServers), 'mcprc')
+  pushAll(Object.entries(projectServers), 'project')
+
+  // De-dup by name, keeping the last occurrence (project overrides mcprc overrides global)
+  const map = new Map<string, ScopedServer>()
+  for (const item of results) map.set(item.name, item)
+  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
+}
+
 export type ScopedMcpServerConfig = McpServerConfig & {
   scope: ConfigScope
 }

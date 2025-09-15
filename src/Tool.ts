@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { PermissionMode } from './types/PermissionMode'
 import * as React from 'react'
 
 /**
@@ -23,6 +24,7 @@ export interface ToolUseContext {
     verbose?: boolean
     slowAndCapableModel?: string
     safeMode?: boolean
+    permissionMode?: PermissionMode
     forkNumber?: number
     messageLogName?: string
     maxThinkingTokens?: any

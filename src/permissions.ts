@@ -1,4 +1,5 @@
 import type { CanUseToolFn } from './hooks/useCanUseTool'
+import type { PermissionMode } from './types/PermissionMode'
 import { Tool, ToolUseContext } from './Tool'
 import { BashTool, inputSchema } from './tools/BashTool/BashTool'
 import { FileEditTool } from './tools/FileEditTool/FileEditTool'
@@ -158,6 +159,31 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
   context,
   _assistantMessage,
 ): Promise<PermissionResult> => {
+  const permissionMode: PermissionMode | undefined = context.options?.permissionMode as any
+
+  // Global bypass mode: allow everything
+  if (permissionMode === 'bypassPermissions') {
+    return { result: true }
+  }
+
+  // Plan mode: only allow read-only tools
+  if (permissionMode === 'plan') {
+    try {
+      const isReadOnly = typeof tool.isReadOnly === 'function' ? tool.isReadOnly() : false
+      if (!isReadOnly) {
+        return {
+          result: false,
+          message: `${PRODUCT_NAME} is in plan mode (read-only). "${tool.name}" is not allowed.`,
+        }
+      }
+    } catch {
+      return {
+        result: false,
+        message: `${PRODUCT_NAME} is in plan mode (read-only).`,
+      }
+    }
+  }
+
   // If safe mode is not enabled, allow all tools (permissive by default)
   if (!context.options.safeMode) {
     return { result: true }
@@ -197,6 +223,10 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
     case FileEditTool:
     case FileWriteTool:
     case NotebookEditTool: {
+      // Accept-edits mode auto-approves edit operations
+      if (permissionMode === 'acceptEdits') {
+        return { result: true }
+      }
       // The types have already been validated by the tool,
       // so we can safely pass this in
       if (!tool.needsPermissions(input)) {

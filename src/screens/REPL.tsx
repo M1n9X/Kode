@@ -73,6 +73,7 @@ import { debug as debugLogger } from '../utils/debugLogger'
 type Props = {
   commands: Command[]
   safeMode?: boolean
+  initialPermissionMode?: import('../types/PermissionMode').PermissionMode
   debug?: boolean
   initialForkNumber?: number | undefined
   initialPrompt: string | undefined
@@ -101,6 +102,7 @@ export type BinaryFeedbackContext = {
 export function REPL({
   commands,
   safeMode,
+  initialPermissionMode,
   debug = false,
   initialForkNumber = 0,
   initialPrompt,
@@ -296,6 +298,7 @@ export function REPL({
             tools,
             verbose,
             safeMode,
+            permissionMode: initialPermissionMode,
             maxThinkingTokens,
           },
           messageId: getLastAssistantMessageId([...messages, ...newMessages]),
@@ -381,6 +384,7 @@ export function REPL({
           tools,
           verbose,
           safeMode,
+          permissionMode: initialPermissionMode,
           maxThinkingTokens,
           // If this came from Koding mode, pass that along
           isKodingRequest: isKodingRequest || undefined,
@@ -618,6 +622,7 @@ export function REPL({
   return (
     <PermissionProvider 
       isBypassPermissionsModeAvailable={!safeMode}
+      initialMode={initialPermissionMode}
       children={
         <React.Fragment>
         {/* Update banner now renders inside Logo for stable placement */}
