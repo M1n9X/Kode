@@ -1,4 +1,4 @@
-#!/usr/bin/env -S node --no-warnings=ExperimentalWarning --enable-source-maps
+#!/usr/bin/env -S node --enable-source-maps
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { existsSync } from 'node:fs'
@@ -25,11 +25,12 @@ try {
   }
 } catch {}
 
-// XXX: Without this line (and the Object.keys, even though it seems like it does nothing!),
-// there is a bug in Bun only on Win32 that causes this import to be removed, even though
-// its use is solely because of its side-effects.
-import * as dontcare from '@anthropic-ai/sdk/shims/node'
-Object.keys(dontcare)
+// Load Anthropic Node shims only where necessary (Bun on Windows)
+try {
+  if ((process as any)?.versions?.bun && process.platform === 'win32') {
+    await import('@anthropic-ai/sdk/shims/node')
+  }
+} catch {}
 
 import React from 'react'
 import { ReadStream } from 'tty'
@@ -59,14 +60,12 @@ import {
 import { cwd } from 'process'
 import { dateToFilename, logError, parseLogFilename } from '../utils/log'
 import { initDebugLogger } from '../utils/debugLogger'
-import { Onboarding } from '../components/Onboarding'
-import { Doctor } from '../screens/Doctor'
 import { ApproveApiKey } from '../components/ApproveApiKey'
-import { TrustDialog } from '../components/TrustDialog'
 import { checkHasTrustDialogAccepted, McpServerConfig } from '../utils/config'
 import { isDefaultSlowAndCapableModel } from '../utils/model'
-import { LogList } from '../screens/LogList'
-import { ResumeConversation } from '../screens/ResumeConversation'
+import { TrustDialog } from '../components/TrustDialog'
+import { Onboarding } from '../components/Onboarding'
+import { Onboarding } from '../components/Onboarding'
 import { startMCPServer } from './mcp'
 import { env } from '../utils/env'
 import { getCwd, setCwd, setOriginalCwd } from '../utils/state'
@@ -103,6 +102,9 @@ import { showInvalidConfigDialog } from '../components/InvalidConfigDialog'
 import { ConfigParseError } from '../utils/errors'
 import { grantReadPermissionForOriginalDir } from '../utils/permissions/filesystem'
 import { MACRO } from '../constants/macros'
+import { Doctor } from '../screens/Doctor'
+import { LogList } from '../screens/LogList'
+import { ResumeConversation } from '../screens/ResumeConversation'
 export function completeOnboarding(): void {
   const config = getGlobalConfig()
   saveGlobalConfig({
@@ -128,18 +130,19 @@ async function showSetupScreens(
     await clearTerminal()
     const { render } = await import('ink')
     await new Promise<void>(resolve => {
-      render(
-        <Onboarding
-          onDone={async () => {
-            completeOnboarding()
-            await clearTerminal()
-            resolve()
-          }}
-        />,
-        {
-          exitOnCtrlC: false,
-        },
-      )
+      ;(async () => {
+        const { render } = await import('ink')
+        render(
+          <Onboarding
+            onDone={async () => {
+              completeOnboarding()
+              await clearTerminal()
+              resolve()
+            }}
+          />,
+          { exitOnCtrlC: false },
+        )
+      })()
     })
   }
 

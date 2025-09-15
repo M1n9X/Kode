@@ -1,6 +1,6 @@
 import * as React from 'react'
-import type { Command } from '../commands'
 import { Onboarding } from '../components/Onboarding'
+import type { Command } from '../commands'
 import { clearTerminal } from '../utils/terminal'
 import { getGlobalConfig, saveGlobalConfig } from '../utils/config'
 import { clearConversation } from './clear'
@@ -19,14 +19,12 @@ export default {
       theme: 'dark',
     })
 
-    return (
-      <Onboarding
-        onDone={async () => {
-          clearConversation(context)
-          onDone()
-        }}
-      />
-    )
+    return React.createElement(Onboarding, {
+      onDone: async () => {
+        clearConversation(context)
+        onDone()
+      },
+    })
   },
   userFacingName() {
     return 'onboarding'

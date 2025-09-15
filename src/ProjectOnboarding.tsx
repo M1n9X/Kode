@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { OrderedList } from '@inkjs/ui'
+import { OrderedList } from './components/OrderedList'
 import { Box, Text } from 'ink'
 import {
   getCurrentProjectConfig,

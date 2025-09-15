@@ -1,7 +1,5 @@
 import React from 'react'
 import { render } from 'ink'
-import { MCPServerMultiselectDialog } from '../components/MCPServerMultiselectDialog'
-import { MCPServerApprovalDialog } from '../components/MCPServerApprovalDialog'
 import { getMcprcServerStatus } from './mcpClient'
 import { getMcprcConfig } from '../utils/config'
 
@@ -24,27 +22,33 @@ export async function handleMcprcServerApprovals(): Promise<void> {
     }
 
     if (pendingServers.length === 1 && pendingServers[0] !== undefined) {
-      const result = render(
-        <MCPServerApprovalDialog
-          serverName={pendingServers[0]}
-          onDone={() => {
-            result.unmount?.()
-            clearScreenAndResolve()
-          }}
-        />,
-        { exitOnCtrlC: false },
-      )
+      (async () => {
+        const { MCPServerApprovalDialog } = await import('../components/MCPServerApprovalDialog.js').catch(() => import('../components/MCPServerApprovalDialog'))
+        const result = render(
+          React.createElement(MCPServerApprovalDialog, {
+            serverName: pendingServers[0]!,
+            onDone: () => {
+              result.unmount?.()
+              clearScreenAndResolve()
+            },
+          }),
+          { exitOnCtrlC: false },
+        )
+      })()
     } else {
-      const result = render(
-        <MCPServerMultiselectDialog
-          serverNames={pendingServers}
-          onDone={() => {
-            result.unmount?.()
-            clearScreenAndResolve()
-          }}
-        />,
-        { exitOnCtrlC: false },
-      )
+      (async () => {
+        const { MCPServerMultiselectDialog } = await import('../components/MCPServerMultiselectDialog.js').catch(() => import('../components/MCPServerMultiselectDialog'))
+        const result = render(
+          React.createElement(MCPServerMultiselectDialog, {
+            serverNames: pendingServers,
+            onDone: () => {
+              result.unmount?.()
+              clearScreenAndResolve()
+            },
+          }),
+          { exitOnCtrlC: false },
+        )
+      })()
     }
   })
 }

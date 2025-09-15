@@ -1,7 +1,7 @@
-import '@anthropic-ai/sdk/shims/node'
 import Anthropic, { APIConnectionError, APIError } from '@anthropic-ai/sdk'
-import { AnthropicBedrock } from '@anthropic-ai/bedrock-sdk'
-import { AnthropicVertex } from '@anthropic-ai/vertex-sdk'
+import type { AnthropicBedrock } from '@anthropic-ai/bedrock-sdk'
+import type { AnthropicVertex } from '@anthropic-ai/vertex-sdk'
+import { createRequire } from 'module'
 import type { BetaUsage } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import chalk from 'chalk'
 import { createHash, randomUUID, UUID } from 'crypto'
@@ -53,8 +53,7 @@ import type {
 import { USE_BEDROCK, USE_VERTEX } from '../utils/model'
 import { getCLISyspromptPrefix } from '../constants/prompts'
 import { getVertexRegionForModel } from '../utils/model'
-import OpenAI from 'openai'
-import type { ChatCompletionStream } from 'openai/lib/ChatCompletionStream'
+import type OpenAI from 'openai'
 import { ContentBlock } from '@anthropic-ai/sdk/resources/messages/messages'
 import { nanoid } from 'nanoid'
 import { getCompletionWithProfile, getGPT5CompletionWithProfile } from './openai'
@@ -639,7 +638,7 @@ function messageReducer(
   return reduce(previous, choice.delta) as OpenAI.ChatCompletionMessage
 }
 async function handleMessageStream(
-  stream: ChatCompletionStream,
+  stream: AsyncIterable<any>,
   signal?: AbortSignal,
 ): Promise<OpenAI.ChatCompletion> {
   const streamStartTime = Date.now()
@@ -829,6 +828,8 @@ function convertOpenAIResponseToAnthropic(response: OpenAI.ChatCompletion, tools
   return finalMessage
 }
 
+const require = createRequire(import.meta.url)
+
 let anthropicClient: Anthropic | AnthropicBedrock | AnthropicVertex | null =
   null
 
@@ -868,7 +869,8 @@ export function getAnthropicClient(
     timeout: parseInt(process.env.API_TIMEOUT_MS || String(60 * 1000), 10),
   }
   if (USE_BEDROCK) {
-    const client = new AnthropicBedrock(ARGS)
+    const { AnthropicBedrock } = require('@anthropic-ai/bedrock-sdk') as typeof import('@anthropic-ai/bedrock-sdk')
+    const client = new AnthropicBedrock(ARGS as any)
     anthropicClient = client
     return client
   }
@@ -877,7 +879,8 @@ export function getAnthropicClient(
       ...ARGS,
       region: region || process.env.CLOUD_ML_REGION || 'us-east5',
     }
-    const client = new AnthropicVertex(vertexArgs)
+    const { AnthropicVertex } = require('@anthropic-ai/vertex-sdk') as typeof import('@anthropic-ai/vertex-sdk')
+    const client = new AnthropicVertex(vertexArgs as any)
     anthropicClient = client
     return client
   }
@@ -1977,7 +1980,7 @@ async function queryOpenAI(
             const s = await getCompletionWithProfile(modelProfile, request, 0, 10, signal)
             let finalResponse
             if (config.stream) {
-              finalResponse = await handleMessageStream(s as ChatCompletionStream, signal)
+              finalResponse = await handleMessageStream(s as any, signal)
             } else {
               finalResponse = s
             }
@@ -1992,7 +1995,7 @@ async function queryOpenAI(
           const s = await completionFunction(modelProfile, opts, 0, 10, signal)
           let finalResponse
           if (opts.stream) {
-            finalResponse = await handleMessageStream(s as ChatCompletionStream, signal)
+            finalResponse = await handleMessageStream(s as any, signal)
           } else {
             finalResponse = s
           }

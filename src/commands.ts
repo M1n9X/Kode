@@ -90,7 +90,7 @@ const COMMANDS = memoize((): Command[] => [
   help,
   init,
   mcp,
-  model,
+  model as unknown as Command,
   modelstatus,
   onboarding,
   pr_comments,

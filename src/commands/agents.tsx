@@ -463,7 +463,6 @@ async function openInEditor(filePath: string): Promise<void> {
   const homeDir = os.homedir()
   
   const isSub = (base: string, target: string) => {
-    const path = require('path')
     const rel = path.relative(path.resolve(base), path.resolve(target))
     if (!rel || rel === '') return true
     if (rel.startsWith('..')) return false

@@ -7,7 +7,7 @@ import {
   DEFAULT_GLOBAL_CONFIG,
   ProviderType,
 } from '../utils/config.js'
-import { OrderedList } from '@inkjs/ui'
+import { OrderedList } from './OrderedList'
 import { useExitOnCtrlCD } from '../hooks/useExitOnCtrlCD'
 import { MIN_LOGO_WIDTH } from './Logo'
 import { Select } from './CustomSelect/select'

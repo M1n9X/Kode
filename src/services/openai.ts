@@ -1,4 +1,4 @@
-import { OpenAI } from 'openai'
+import OpenAI from 'openai'
 import { getGlobalConfig, GlobalConfig } from '../utils/config'
 import { ProxyAgent, fetch, Response } from 'undici'
 import { setSessionState, getSessionState } from '../utils/sessionState'
