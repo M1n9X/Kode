@@ -1,7 +1,6 @@
 import { Box, Text } from 'ink'
 import React from 'react'
 import { z } from 'zod'
-import fetch from 'node-fetch'
 import { Cost } from '../../components/Cost'
 import { FallbackToolUseRejectedMessage } from '../../components/FallbackToolUseRejectedMessage'
 import { Tool, ToolUseContext } from '../../Tool'

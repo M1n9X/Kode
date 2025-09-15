@@ -108,9 +108,14 @@ const cliTsx = path.join(__dirname, 'src', 'entrypoints', 'cli.tsx');
 const distCli = path.join(__dirname, 'dist', 'entrypoints', 'cli.js');
 
 function runNode(file) {
-  const child = spawn(process.execPath, [file, ...args], {
+  const extraNodeOpts = ['--disable-warning=ExperimentalWarning', '--disable-warning=DEP0040']
+  const child = spawn(process.execPath, [...extraNodeOpts, file, ...args], {
     stdio: 'inherit',
-    env: { ...process.env, YOGA_WASM_PATH: path.join(__dirname, 'yoga.wasm') },
+    env: {
+      ...process.env,
+      YOGA_WASM_PATH: path.join(__dirname, 'yoga.wasm'),
+      NODE_OPTIONS: ((process.env.NODE_OPTIONS || '') + ' ' + extraNodeOpts.join(' ')).trim(),
+    },
   });
   child.on('exit', (code) => process.exit(code || 0));
   child.on('error', () => process.exit(1));
@@ -125,7 +130,11 @@ if (fs.existsSync(distCli)) {
     execSync('bun --version', { stdio: 'ignore' });
     const child = spawn('bun', ['run', cliTsx, ...args], {
       stdio: 'inherit',
-      env: { ...process.env, YOGA_WASM_PATH: path.join(__dirname, 'yoga.wasm') },
+      env: {
+        ...process.env,
+        YOGA_WASM_PATH: path.join(__dirname, 'yoga.wasm'),
+        NODE_OPTIONS: ((process.env.NODE_OPTIONS || '') + ' --disable-warning=ExperimentalWarning --disable-warning=DEP0040').trim(),
+      },
     });
     child.on('exit', (code) => process.exit(code || 0));
     child.on('error', runWithTsx);
@@ -142,14 +151,24 @@ function runWithTsx() {
   const child = spawn(tsxLocal, [cliTsx, ...args], {
     stdio: 'inherit',
     shell: process.platform === 'win32',
-    env: { ...process.env, YOGA_WASM_PATH: path.join(__dirname, 'yoga.wasm'), TSX_TSCONFIG_PATH: process.platform === 'win32' ? 'noop' : undefined },
+    env: {
+      ...process.env,
+      YOGA_WASM_PATH: path.join(__dirname, 'yoga.wasm'),
+      TSX_TSCONFIG_PATH: process.platform === 'win32' ? 'noop' : undefined,
+      NODE_OPTIONS: ((process.env.NODE_OPTIONS || '') + ' --disable-warning=ExperimentalWarning --disable-warning=DEP0040').trim(),
+    },
   });
   child.on('error', () => {
     // Fallback to PATH tsx
     const child2 = spawn('tsx', [cliTsx, ...args], {
       stdio: 'inherit',
       shell: process.platform === 'win32',
-      env: { ...process.env, YOGA_WASM_PATH: path.join(__dirname, 'yoga.wasm'), TSX_TSCONFIG_PATH: process.platform === 'win32' ? 'noop' : undefined },
+      env: {
+        ...process.env,
+        YOGA_WASM_PATH: path.join(__dirname, 'yoga.wasm'),
+        TSX_TSCONFIG_PATH: process.platform === 'win32' ? 'noop' : undefined,
+        NODE_OPTIONS: ((process.env.NODE_OPTIONS || '') + ' --disable-warning=ExperimentalWarning --disable-warning=DEP0040').trim(),
+      },
     });
     child2.on('error', () => {
       console.error('Error: tsx is required but not found.');
