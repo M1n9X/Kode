@@ -152,7 +152,7 @@ function runWithTsx() {
       env: { ...process.env, YOGA_WASM_PATH: path.join(__dirname, 'yoga.wasm'), TSX_TSCONFIG_PATH: process.platform === 'win32' ? 'noop' : undefined },
     });
     child2.on('error', () => {
-      console.error('\nError: tsx is required but not found.');
+      console.error('Error: tsx is required but not found.');
       console.error('Please install tsx globally: npm i -g tsx');
       process.exit(1);
     });
