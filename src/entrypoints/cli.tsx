@@ -32,7 +32,12 @@ try {
 ;(async () => {
   try {
     if ((process as any)?.versions?.bun && process.platform === 'win32') {
-      await import('@anthropic-ai/sdk/shims/node')
+      // Try to import Anthropic shims - ignore if not available
+      try {
+        await import('@anthropic-ai/sdk/shims/node')
+      } catch {
+        // Shims not available or not needed
+      }
     }
   } catch {}
 })()
@@ -1030,12 +1035,14 @@ ${commandList}`,
         console.log(`  URL: ${server.url}`)
       } else {
         console.log(`  Type: stdio`)
-        console.log(`  Command: ${server.command}`)
-        console.log(`  Args: ${server.args.join(' ')}`)
-        if (server.env) {
-          console.log('  Environment:')
-          for (const [key, value] of Object.entries(server.env)) {
-            console.log(`    ${key}=${value}`)
+        if ('command' in server) {
+          console.log(`  Command: ${server.command}`)
+          console.log(`  Args: ${server.args?.join(' ') || ''}`)
+          if (server.env) {
+            console.log('  Environment:')
+            for (const [key, value] of Object.entries(server.env)) {
+              console.log(`    ${key}=${value}`)
+            }
           }
         }
       }

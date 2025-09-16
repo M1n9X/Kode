@@ -75,6 +75,9 @@ function baseCreateAssistantMessage(
         output_tokens: 0,
         cache_creation_input_tokens: 0,
         cache_read_input_tokens: 0,
+        cache_creation: null,
+        server_tool_use: null,
+        service_tier: null,
       },
       content,
     },
@@ -297,7 +300,7 @@ export async function processUserInput(
       newMessages[0]!.type === 'user' &&
       newMessages[1]!.type === 'assistant' &&
       typeof newMessages[1]!.message.content === 'string' &&
-      newMessages[1]!.message.content.startsWith('Unknown command:')
+      (newMessages[1]!.message.content as string).startsWith('Unknown command:')
     ) {
       
       return newMessages

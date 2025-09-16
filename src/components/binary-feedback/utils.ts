@@ -142,7 +142,10 @@ export function messagePairValidForBinaryFeedback(
 
   // If they're all text blocks, compare those
   if (!hasToolUse) {
-    if (allContentBlocksEqual(nonThinkingBlocks1, nonThinkingBlocks2)) {
+    if (allContentBlocksEqual(
+      nonThinkingBlocks1.filter(b => b.type === 'text' || b.type === 'tool_use'),
+      nonThinkingBlocks2.filter(b => b.type === 'text' || b.type === 'tool_use')
+    )) {
       logFail('contents_identical')
       return false
     }

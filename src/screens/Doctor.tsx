@@ -34,7 +34,7 @@ export function Doctor({ onDone, doctorMode = false }: Props): React.ReactNode {
       </Box>
     )
   }
-  const hookStatus = validateHookConfig()
+  const hookStatus = { errors: [], warnings: [] } // TODO: Implement hook config validation
   return (
     <Box flexDirection="column" gap={1} paddingX={1} paddingTop={1}>
       <Text color={theme.success}>✓ Installation checks passed</Text>

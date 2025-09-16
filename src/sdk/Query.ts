@@ -57,8 +57,6 @@ export class QuerySession {
           safeMode: Boolean(options.safeMode),
           model: options.model ?? 'main',
           prependCLISysprompt: false,
-          permissionMode: options.permissionMode,
-          verbose: options.verbose,
         },
       )
 

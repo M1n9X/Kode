@@ -504,7 +504,7 @@ export const getMCPTools = memoize(async (): Promise<Tool[]> => {
           yield {
             type: 'result' as const,
             data,
-            resultForAssistant: data,
+            resultForAssistant: typeof data === 'string' ? data : undefined,
           }
         },
         userFacingName() {
@@ -552,7 +552,7 @@ async function callMCPTool({
           source: {
             type: 'base64',
             data: String(item.data),
-            media_type: item.mimeType as ImageBlockParam.Source['media_type'],
+            media_type: item.mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
           },
         }
       }
@@ -622,7 +622,7 @@ export async function runCommand(
                 source: {
                   data: String(message.content.data),
                   media_type: message.content
-                    .mimeType as ImageBlockParam.Source['media_type'],
+                    .mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
                   type: 'base64',
                 },
               },

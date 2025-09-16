@@ -152,7 +152,9 @@ User request: ${prompt}`
       const output: Output = {
         url: normalizedUrl,
         fromCache,
-        aiAnalysis: aiResponse.message.content[0]?.text || 'Unable to analyze content',
+        aiAnalysis: (Array.isArray(aiResponse.message.content) && aiResponse.message.content[0] && 'text' in aiResponse.message.content[0]) 
+          ? (aiResponse.message.content[0] as any).text 
+          : 'Unable to analyze content',
       }
 
       yield {

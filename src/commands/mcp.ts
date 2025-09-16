@@ -41,14 +41,14 @@ async function importFromClaudeDesktop(): Promise<string> {
     const configContent = readFileSync(configPath, 'utf-8')
     const config = safeParseJSON(configContent)
     
-    if (!config?.mcpServers || typeof config.mcpServers !== 'object') {
+    if (!config || typeof config !== 'object' || !('mcpServers' in config) || typeof config.mcpServers !== 'object') {
       return '⎿  No MCP servers found in Claude Desktop configuration'
     }
 
     let imported = 0
     const errors: string[] = []
 
-    for (const [name, serverConfig] of Object.entries(config.mcpServers)) {
+    for (const [name, serverConfig] of Object.entries((config as any).mcpServers)) {
       try {
         const mcpConfig = serverConfig as any
         let kodeConfig: McpServerConfig

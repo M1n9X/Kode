@@ -145,10 +145,10 @@ Make the agent highly specialized and effective for the described use case.`
     if (typeof response.message?.content === 'string') {
       responseText = response.message.content
     } else if (Array.isArray(response.message?.content)) {
-      const textContent = response.message.content.find((c: any) => c.type === 'text')
+      const textContent = response.message.content.find((c: any) => c.type === 'text') as any
       responseText = textContent?.text || ''
-    } else if (response.message?.content?.[0]?.text) {
-      responseText = response.message.content[0].text
+    } else if (Array.isArray(response.message?.content) && response.message.content[0] && 'text' in response.message.content[0]) {
+      responseText = (response.message.content[0] as any).text
     }
     
     if (!responseText) {

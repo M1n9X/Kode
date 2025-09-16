@@ -158,9 +158,10 @@ const ERROR_HANDLERS: ErrorHandler[] = [
     fix: async opts => {
       const toolDescriptions = {}
       for (const tool of opts.tools || []) {
-        if (tool.function.description.length <= 1024) continue
+        if ('function' in tool && tool.function.description.length <= 1024) continue
         let str = ''
         let remainder = ''
+        if (!('function' in tool)) continue
         for (let line of tool.function.description.split('\n')) {
           if (str.length + line.length < 1024) {
             str += line + '\n'
@@ -169,8 +170,10 @@ const ERROR_HANDLERS: ErrorHandler[] = [
           }
         }
         
-        tool.function.description = str
-        toolDescriptions[tool.function.name] = remainder
+        if ('function' in tool) {
+          tool.function.description = str
+          toolDescriptions[tool.function.name] = remainder
+        }
       }
       if (Object.keys(toolDescriptions).length > 0) {
         let content = '<additional-tool-usage-instructions>\n\n'

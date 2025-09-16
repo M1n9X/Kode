@@ -93,6 +93,9 @@ const compact = {
       output_tokens: summaryResponse.message.usage.output_tokens,
       cache_creation_input_tokens: 0,
       cache_read_input_tokens: 0,
+      cache_creation: null,
+      server_tool_use: null,
+      service_tier: null,
     }
 
     await clearTerminal()

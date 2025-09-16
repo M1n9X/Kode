@@ -1,6 +1,7 @@
 import { Message } from '../query'
 import type { UUID } from '../types/common'
 import { countTokens } from './tokens'
+import { nanoid } from 'nanoid'
 import crypto from 'crypto'
 
 export interface MessageRetentionStrategy {
@@ -136,13 +137,27 @@ export class MessageContextManager {
 
     // Create a summary message
     const summaryMessage: Message = {
+      id: nanoid(),
       type: 'assistant',
+      model: 'summary',
+      stop_reason: 'end_turn' as const,
+      stop_sequence: null,
+      usage: {
+        input_tokens: 0,
+        output_tokens: 0,
+        cache_creation_input_tokens: 0,
+        cache_read_input_tokens: 0,
+        cache_creation: null,
+        server_tool_use: null,
+        service_tier: null,
+      },
       message: {
         role: 'assistant',
         content: [
           {
             type: 'text',
             text: `[CONVERSATION SUMMARY - ${olderMessages.length} messages compressed]\n\n${summary}\n\n[END SUMMARY - Recent context follows...]`,
+            citations: [],
           },
         ],
       },

@@ -620,8 +620,12 @@ async function* checkPermissionsAndCallTool(
   try {
     // Pre-tool hooks (best effort)
     try {
-      const { runPreToolHooks } = await import('./services/hooks/HookSystem')
-      await runPreToolHooks(tool.name, { safeMode: toolUseContext.options.safeMode, permissionMode: toolUseContext.options.permissionMode as any })
+      const { runPreToolUseHooks } = await import('./services/hooks/HookSystem')
+      await runPreToolUseHooks({ 
+        toolName: tool.name, 
+        safeMode: context.options.safeMode, 
+        permissionMode: context.options.permissionMode as any 
+      })
     } catch {}
     const generator = tool.call(normalizedInput as never, context)
     for await (const result of generator) {
@@ -643,8 +647,12 @@ async function* checkPermissionsAndCallTool(
           )
           // Post-tool hooks (best effort)
           try {
-            const { runPostToolHooks } = await import('./services/hooks/HookSystem')
-            await runPostToolHooks(tool.name, { safeMode: toolUseContext.options.safeMode, permissionMode: toolUseContext.options.permissionMode as any })
+            const { runPostToolUseHooks } = await import('./services/hooks/HookSystem')
+            await runPostToolUseHooks({ 
+              toolName: tool.name, 
+              safeMode: context.options.safeMode, 
+              permissionMode: context.options.permissionMode as any 
+            })
           } catch {}
           return
         case 'progress':

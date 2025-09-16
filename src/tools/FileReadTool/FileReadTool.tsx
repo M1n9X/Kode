@@ -283,7 +283,7 @@ export const FileReadTool = {
     }
   | {
       type: 'image'
-      file: { base64: string; type: ImageBlockParam.Source['media_type'] }
+      file: { base64: string; type: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' }
     }
 >
 
@@ -295,13 +295,13 @@ function createImageResponse(
   ext: string,
 ): {
   type: 'image'
-  file: { base64: string; type: ImageBlockParam.Source['media_type'] }
+  file: { base64: string; type: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' }
 } {
   return {
     type: 'image',
     file: {
       base64: buffer.toString('base64'),
-      type: `image/${ext.slice(1)}` as ImageBlockParam.Source['media_type'],
+      type: `image/${ext.slice(1)}` as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
     },
   }
 }
@@ -311,15 +311,11 @@ async function readImage(
   ext: string,
 ): Promise<{
   type: 'image'
-  file: { base64: string; type: ImageBlockParam.Source['media_type'] }
+  file: { base64: string; type: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' }
 }> {
   try {
     const stats = statSync(filePath)
-    const sharp = (
-      (await import('sharp')) as unknown as { default: typeof import('sharp') }
-    ).default
-    
-    // Use secure file service to read the file
+    // Use secure file service to read the file first
     const fileReadResult = secureFileService.safeReadFile(filePath, {
       encoding: 'buffer' as BufferEncoding,
       maxFileSize: MAX_IMAGE_SIZE
@@ -329,7 +325,24 @@ async function readImage(
       throw new Error(`Failed to read image file: ${fileReadResult.error}`)
     }
     
-    const image = sharp(fileReadResult.content as Buffer)
+    const buffer = fileReadResult.data as Buffer
+    const fallbackBase64 = buffer.toString('base64')
+    
+    let sharp: any
+    try {
+      sharp = ((await import('sharp')) as any).default
+    } catch {
+      // Sharp not available - return unoptimized image
+      return { 
+        type: 'image' as const,
+        file: { 
+          base64: fallbackBase64, 
+          type: `image/${ext.slice(1)}` as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' 
+        }
+      }
+    }
+    
+    const image = sharp(buffer)
     const metadata = await image.metadata()
 
     if (!metadata.width || !metadata.height) {

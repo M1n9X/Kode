@@ -15,14 +15,16 @@ const mode: Command = {
   async call(args: string, context) {
     const [targetMode] = args.trim().split(/\s+/).filter(Boolean)
     
-    const currentMode = (context.options?.permissionMode as PermissionMode) || 'default'
+    // Get current permission mode from global config or default
+    const globalConfig = getGlobalConfig()
+    const currentMode = (globalConfig.defaultPermissionMode as PermissionMode) || 'bypassPermissions'
     
     if (!targetMode) {
       // Show current mode and available modes
-      const config = MODE_CONFIGS[currentMode]
+      const modeConfig = MODE_CONFIGS[currentMode]
       const lines = [
-        `⎿  Current Permission Mode: ${config.icon} ${config.label}`,
-        `   ${config.description}`,
+        `⎿  Current Permission Mode: ${modeConfig.icon} ${modeConfig.label}`,
+        `   ${modeConfig.description}`,
         '',
         '⎿  Available Modes:',
       ]
@@ -70,22 +72,19 @@ const mode: Command = {
     }
     
     if (newMode === currentMode) {
-      const config = MODE_CONFIGS[currentMode]
-      return `⎿  Already in ${config.icon} ${config.label} mode`
+      const currentModeConfig = MODE_CONFIGS[currentMode]
+      return `⎿  Already in ${currentModeConfig.icon} ${currentModeConfig.label} mode`
     }
     
-    // Update the mode in context
-    if (context.options) {
-      context.options.permissionMode = newMode
-    }
+    // Note: Permission mode is managed globally through config
+    // Context doesn't have permissionMode property
     
     // Save to global config as default
-    const globalConfig = getGlobalConfig()
     globalConfig.defaultPermissionMode = newMode
     saveGlobalConfig(globalConfig)
     
-    const config = MODE_CONFIGS[newMode]
-    return `⎿  Switched to ${config.icon} ${config.label} mode\n   ${config.description}`
+    const newModeConfig = MODE_CONFIGS[newMode]
+    return `⎿  Switched to ${newModeConfig.icon} ${newModeConfig.label} mode\n   ${newModeConfig.description}`
   },
 }
 

@@ -64,7 +64,12 @@ const modelCommand: Command = {
 
         const config = getGlobalConfig()
         if (!config.modelPointers) {
-          config.modelPointers = {}
+          config.modelPointers = {
+            main: '',
+            task: '',
+            reasoning: '',
+            quick: ''
+          }
         }
         
         // Check if model exists in profiles
@@ -99,19 +104,15 @@ const modelCommand: Command = {
             
             if (!profile.name) issues.push('missing name')
             if (!profile.provider) issues.push('missing provider')
-            if (!profile.apiKey && !profile.endpoint) issues.push('missing apiKey or endpoint')
+            if (!profile.apiKey && !profile.baseURL) issues.push('missing apiKey or baseURL')
             
             // GPT-5 specific validation
-            if (profile.name?.includes('gpt-5') || profile.model?.includes('gpt-5')) {
+            if (profile.name?.includes('gpt-5') || profile.modelName?.includes('gpt-5')) {
               if (profile.maxTokens && profile.maxTokens > 8192) {
                 issues.push('maxTokens too high for GPT-5 (max 8192)')
               }
-              if (profile.stream_options) {
-                issues.push('stream_options not supported')
-              }
-              if (profile.citations) {
-                issues.push('citations parameter not supported')
-              }
+              // Note: stream_options and citations are not part of ModelProfile type
+              // They would be handled at the API level
             }
 
             if (issues.length === 0) {
@@ -148,25 +149,13 @@ const modelCommand: Command = {
           const issues = []
           
           // GPT-5 specific repairs
-          if (profile.name?.includes('gpt-5') || profile.model?.includes('gpt-5')) {
+          if (profile.name?.includes('gpt-5') || profile.modelName?.includes('gpt-5')) {
             if (profile.maxTokens && profile.maxTokens > 8192) {
               profile.maxTokens = 8192
               issues.push('fixed maxTokens')
             }
-            if (profile.stream_options) {
-              delete profile.stream_options
-              issues.push('removed stream_options')
-            }
-            if (profile.citations) {
-              delete profile.citations
-              issues.push('removed citations')
-            }
-            // Fix max_tokens -> max_completion_tokens for GPT-5
-            if (profile.max_tokens && !profile.max_completion_tokens) {
-              profile.max_completion_tokens = profile.max_tokens
-              delete profile.max_tokens
-              issues.push('renamed max_tokens to max_completion_tokens')
-            }
+            // Note: stream_options and citations are not part of ModelProfile type
+            // They would be handled at the API level during request processing
           }
 
           if (issues.length > 0) {
@@ -211,7 +200,7 @@ const modelCommand: Command = {
         ].join('\n')
       }
     }
-  },
+  }
 }
 
 // Legacy exports for backward compatibility

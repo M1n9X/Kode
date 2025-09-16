@@ -177,6 +177,7 @@ export const TaskTool = {
       const permissionMode = (arguments?.[1] as any)?.options?.permissionMode
       if (permissionMode === 'plan') {
         const { PROMPT: PLAN_PROMPT } = await import('../PlanReviewTool/prompt')
+        const { queryLLM } = await import('../../services/claude')
         const reviewResp = await queryLLM(
           [createUserMessage(effectivePrompt)],
           [PLAN_PROMPT],

@@ -773,7 +773,7 @@ function convertOpenAIResponseToAnthropic(response: OpenAI.ChatCompletion, tools
 
   if (message?.tool_calls) {
     for (const toolCall of message.tool_calls) {
-      const tool = toolCall.function
+      const tool = 'function' in toolCall ? toolCall.function : undefined
       const toolName = tool?.name
       let toolArgs = {}
       try {
