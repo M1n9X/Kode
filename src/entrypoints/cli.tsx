@@ -3,8 +3,11 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { existsSync } from 'node:fs'
 import { initSentry } from '../services/sentry'
+import { configureHttpProxyFromEnv } from '../utils/http'
 import { PRODUCT_COMMAND, PRODUCT_NAME } from '../constants/product'
 initSentry() // Initialize Sentry as early as possible
+// Configure global HTTP proxy for all network calls (OpenAI/Anthropic/MCP/fetch)
+configureHttpProxyFromEnv()
 
 // Ensure YOGA_WASM_PATH is set for Ink across run modes (wrapper/dev)
 // Resolve yoga.wasm relative to this file when missing using ESM-friendly APIs
