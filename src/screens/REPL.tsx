@@ -124,12 +124,12 @@ export function REPL({
   const [showStatusLine] = useState(() => Boolean(getGlobalConfig().statusLineEnabled))
 
   // Session lifecycle hooks (optional; default disabled via config)
-  useEffect(() => {
-    runSessionStartHooks().catch(() => {})
-    return () => {
-      runSessionEndHooks().catch(() => {})
-    }
-  }, [])
+useEffect(() => {
+  runSessionStartHooks({ safeMode, permissionMode: initialPermissionMode }).catch(() => {})
+  return () => {
+    runSessionEndHooks({ safeMode, permissionMode: initialPermissionMode }).catch(() => {})
+  }
+}, [])
   const verbose = verboseConfig
 
   // Used to force the logo to re-render and conversation log to use a new file

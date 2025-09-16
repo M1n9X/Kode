@@ -73,27 +73,33 @@ async function runHooks(list: Hook[] | undefined, toolName?: string): Promise<vo
   }
 }
 
-export async function runSessionStartHooks(): Promise<void> {
+export async function runSessionStartHooks(options?: { safeMode?: boolean; permissionMode?: string }): Promise<void> {
   const cfg = getConfig()
   if (!cfg?.enabled) return
+  if (options?.safeMode) return
   await runHooks(cfg.sessionStart)
 }
 
-export async function runSessionEndHooks(): Promise<void> {
+export async function runSessionEndHooks(options?: { safeMode?: boolean; permissionMode?: string }): Promise<void> {
   const cfg = getConfig()
   if (!cfg?.enabled) return
+  if (options?.safeMode) return
   await runHooks(cfg.sessionEnd)
 }
 
-export async function runPreToolHooks(toolName: string): Promise<void> {
+export async function runPreToolHooks(toolName: string, options?: { safeMode?: boolean; permissionMode?: string }): Promise<void> {
   const cfg = getConfig()
   if (!cfg?.enabled) return
+  if (options?.safeMode) return
+  if (options?.permissionMode === 'plan') return
   await runHooks(cfg.preToolUse, toolName)
 }
 
-export async function runPostToolHooks(toolName: string): Promise<void> {
+export async function runPostToolHooks(toolName: string, options?: { safeMode?: boolean; permissionMode?: string }): Promise<void> {
   const cfg = getConfig()
   if (!cfg?.enabled) return
+  if (options?.safeMode) return
+  if (options?.permissionMode === 'plan') return
   await runHooks(cfg.postToolUse, toolName)
 }
 
