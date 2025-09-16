@@ -62,7 +62,7 @@ import { dateToFilename, logError, parseLogFilename } from '../utils/log'
 import { initDebugLogger } from '../utils/debugLogger'
 import { ApproveApiKey } from '../components/ApproveApiKey'
 import { checkHasTrustDialogAccepted, McpServerConfig } from '../utils/config'
-import { isDefaultSlowAndCapableModel } from '../utils/model'
+import { isDefaultSlowAndCapableModel, getModelManager } from '../utils/model'
 import { TrustDialog } from '../components/TrustDialog'
 import { Onboarding } from '../components/Onboarding'
 import { startMCPServer } from './mcp'
@@ -1321,6 +1321,91 @@ ${commandList}`,
         console.log('\nNote: you may need to prefix with "sudo" on macOS/Linux.')
       }
       process.exit(0)
+    })
+
+  // models (CLI management for model profiles and pointers)
+  const models = program
+    .command('models')
+    .alias('modelctl')
+    .description('Manage model profiles and pointers (list/use/validate/repair)')
+
+  models
+    .command('list')
+    .description('List model pointers and configured model profiles')
+    .action(async () => {
+      try {
+        const mm = getModelManager()
+        const debug = mm.getModelSwitchingDebugInfo()
+        console.log('Pointers:')
+        console.log(`  main     -> ${debug.modelPointers.main || '(unset)'}`)
+        console.log(`  task     -> ${debug.modelPointers.task || '(unset)'}`)
+        console.log(`  reasoning-> ${debug.modelPointers.reasoning || '(unset)'}`)
+        console.log(`  quick    -> ${debug.modelPointers.quick || '(unset)'}`)
+        console.log('\nProfiles:')
+        for (const p of debug.availableModels) {
+          console.log(`  - ${p.name} [${p.provider}] => ${p.modelName} ${p.isActive ? '' : '(inactive)'}`)
+        }
+        process.exit(0)
+      } catch (e) {
+        console.error('Failed to list models:', (e as Error).message)
+        process.exit(1)
+      }
+    })
+
+  models
+    .command('use <pointer> <model>')
+    .description('Assign a model to a pointer (main|task|reasoning|quick)')
+    .action((pointer: string, model: string) => {
+      try {
+        const valid = ['main', 'task', 'reasoning', 'quick']
+        const ptr = pointer.toLowerCase()
+        if (!valid.includes(ptr)) {
+          console.error(`Invalid pointer '${pointer}'. Use one of: ${valid.join(', ')}`)
+          process.exit(1)
+        }
+        const mm = getModelManager()
+        const res = mm.resolveModelWithInfo(model)
+        if (!res.success || !res.profile) {
+          console.error(res.error || `Model '${model}' not found.`)
+          process.exit(1)
+        }
+        mm.setPointer(ptr as any, res.profile.modelName)
+        console.log(`Pointer '${ptr}' -> ${res.profile.modelName}`)
+        process.exit(0)
+      } catch (e) {
+        console.error('Failed to assign pointer:', (e as Error).message)
+        process.exit(1)
+      }
+    })
+
+  models
+    .command('validate')
+    .description('Validate GPT-5 profiles and report issues')
+    .action(() => {
+      try {
+        const { validateAndRepairAllGPT5Profiles } = require('../utils/config') as typeof import('../utils/config')
+        const { repaired, total } = validateAndRepairAllGPT5Profiles()
+        console.log(`Validated ${total} profiles. Auto-repaired: ${repaired}.`)
+        process.exit(0)
+      } catch (e) {
+        console.error('Validation failed:', (e as Error).message)
+        process.exit(1)
+      }
+    })
+
+  models
+    .command('repair')
+    .description('Validate and auto-repair GPT-5 profiles (same as validate)')
+    .action(() => {
+      try {
+        const { validateAndRepairAllGPT5Profiles } = require('../utils/config') as typeof import('../utils/config')
+        const { repaired, total } = validateAndRepairAllGPT5Profiles()
+        console.log(`Validated ${total} profiles. Auto-repaired: ${repaired}.`)
+        process.exit(0)
+      } catch (e) {
+        console.error('Repair failed:', (e as Error).message)
+        process.exit(1)
+      }
     })
 
   // claude log
