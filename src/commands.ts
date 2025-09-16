@@ -20,6 +20,7 @@ import refreshCommands from './commands/refreshCommands'
 import releaseNotes from './commands/release-notes'
 import review from './commands/review'
 import terminalSetup from './commands/terminalSetup'
+import plan_review from './commands/plan_review'
 import { Tool, ToolUseContext } from './Tool'
 import resume from './commands/resume'
 import agents from './commands/agents'
@@ -96,6 +97,7 @@ const COMMANDS = memoize((): Command[] => [
   pr_comments,
   refreshCommands,
   releaseNotes,
+  plan_review,
   bug,
   review,
   terminalSetup,

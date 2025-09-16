@@ -20,6 +20,7 @@ import { WebSearchTool } from './tools/WebSearchTool/WebSearchTool'
 import { URLFetcherTool } from './tools/URLFetcherTool/URLFetcherTool'
 import { getMCPTools } from './services/mcpClient'
 import { memoize } from 'lodash-es'
+import { PlanReviewTool } from './tools/PlanReviewTool/PlanReviewTool'
 
 const ANT_ONLY_TOOLS = [MemoryReadTool as unknown as Tool, MemoryWriteTool as unknown as Tool]
 
@@ -42,6 +43,7 @@ export const getAllTools = (): Tool[] => {
     TodoWriteTool as unknown as Tool,
     WebSearchTool as unknown as Tool,
     URLFetcherTool as unknown as Tool,
+    PlanReviewTool as unknown as Tool,
     ...ANT_ONLY_TOOLS,
   ]
 }
