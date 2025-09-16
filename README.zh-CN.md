@@ -342,6 +342,12 @@ export HTTPS_PROXY="http://127.0.0.1:7890"
 export HTTP_PROXY="http://127.0.0.1:7890"
 ```
 
+### 全局配置位置
+
+- 推荐：`~/.kode/config.json`
+- 兼容：`~/.kode.json`（若目录配置缺失则自动使用该文件）
+- 自定义目录：设置环境变量 `KODE_CONFIG_DIR=/path/to/dir`（配置文件为 `/path/to/dir/config.json`）
+
 ### Hook（实验性）
 
 在 `~/.kode.json` 配置生命周期钩子（默认关闭）：

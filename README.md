@@ -212,7 +212,7 @@ The Docker setup includes:
 
 - **Cleanup**: `--rm` flag removes the container after exit
 
-**Note**: Kode uses both `~/.kode` directory for additional data (like memory files) and `~/.kode.json` file for global configuration.
+**Note**: Kode stores data under `~/.kode/` and prefers `~/.kode/config.json` for global configuration. For backward compatibility, `~/.kode.json` is still supported and automatically used if the directory config is missing.
 
 The first time you run the Docker command, it will build the image. Subsequent runs will use the cached image for faster startup.
 

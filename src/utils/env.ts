@@ -2,17 +2,25 @@ import { execFileNoThrow } from './execFileNoThrow'
 import { memoize } from 'lodash-es'
 import { join } from 'path'
 import { homedir } from 'os'
+import { existsSync } from 'fs'
 import { CONFIG_BASE_DIR, CONFIG_FILE } from '../constants/product'
-// Base directory for all Any kode data files (except config.json for backwards compatibility)
-// Support both KODE_CONFIG_DIR and CLAUDE_CONFIG_DIR for compatibility
+// Base directory for Kode data files
+// Supports both KODE_CONFIG_DIR and CLAUDE_CONFIG_DIR for compatibility
 export const CLAUDE_BASE_DIR =
   process.env.KODE_CONFIG_DIR ?? process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), CONFIG_BASE_DIR)
 
 // Config and data paths
-// Support both KODE_CONFIG_DIR and CLAUDE_CONFIG_DIR environment variables
-export const GLOBAL_CLAUDE_FILE = (process.env.KODE_CONFIG_DIR || process.env.CLAUDE_CONFIG_DIR)
-  ? join(CLAUDE_BASE_DIR, 'config.json')
-  : join(homedir(), CONFIG_FILE)
+// Preferred config path hierarchy (first match wins):
+// 1) $KODE_CONFIG_DIR/config.json (or $CLAUDE_CONFIG_DIR/config.json)
+// 2) ~/.kode/config.json (directory-based default)
+// 3) ~/.kode.json (legacy fallback)
+const CONFIG_DIR_CANDIDATE = join(CLAUDE_BASE_DIR, 'config.json')
+export const GLOBAL_CLAUDE_FILE =
+  process.env.KODE_CONFIG_DIR || process.env.CLAUDE_CONFIG_DIR
+    ? CONFIG_DIR_CANDIDATE
+    : existsSync(CONFIG_DIR_CANDIDATE)
+      ? CONFIG_DIR_CANDIDATE
+      : join(homedir(), CONFIG_FILE)
 export const MEMORY_DIR = join(CLAUDE_BASE_DIR, 'memory')
 
 const getIsDocker = memoize(async (): Promise<boolean> => {
