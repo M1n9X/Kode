@@ -185,6 +185,46 @@ export type GlobalConfig = {
   defaultSafeMode?: boolean
   defaultPermissionMode?: 'default' | 'acceptEdits' | 'plan' | 'bypassPermissions'
 
+  // Hook system configuration
+  hookSystem?: {
+    enabled?: boolean
+    sessionStart?: Array<{
+      command: string
+      match?: string
+      timeoutMs?: number
+      enabled?: boolean
+      env?: Record<string, string>
+    }>
+    sessionEnd?: Array<{
+      command: string
+      match?: string
+      timeoutMs?: number
+      enabled?: boolean
+      env?: Record<string, string>
+    }>
+    preToolUse?: Array<{
+      command: string
+      match?: string
+      timeoutMs?: number
+      enabled?: boolean
+      env?: Record<string, string>
+    }>
+    postToolUse?: Array<{
+      command: string
+      match?: string
+      timeoutMs?: number
+      enabled?: boolean
+      env?: Record<string, string>
+    }>
+    notification?: Array<{
+      command: string
+      match?: string
+      timeoutMs?: number
+      enabled?: boolean
+      env?: Record<string, string>
+    }>
+  }
+
   // New model system
   modelProfiles?: ModelProfile[] // Model configuration list
   modelPointers?: ModelPointers // Model pointer system

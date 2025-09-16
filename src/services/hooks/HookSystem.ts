@@ -1,149 +1,197 @@
+import { z } from 'zod'
 import { spawn } from 'child_process'
 import { getGlobalConfig } from '../../utils/config'
-import { debug as debugLogger } from '../../utils/debugLogger'
+import { logError } from '../../utils/log'
+import type { PermissionMode } from '../../types/PermissionMode'
 
-type Hook = {
-  match?: string // substring match on tool name
-  command: string // shell command to run
-  timeoutMs?: number
+// Hook configuration schema
+const HookConfigSchema = z.object({
+  command: z.string().describe('Shell command to execute'),
+  match: z.string().optional().describe('Tool name or pattern to match'),
+  timeoutMs: z.number().default(5000).describe('Timeout in milliseconds'),
+  enabled: z.boolean().default(true).describe('Whether this hook is enabled'),
+  env: z.record(z.string()).optional().describe('Additional environment variables'),
+})
+
+const HookSystemConfigSchema = z.object({
+  enabled: z.boolean().default(false).describe('Whether hooks are enabled globally'),
+  sessionStart: z.array(HookConfigSchema).default([]).describe('Hooks to run on session start'),
+  sessionEnd: z.array(HookConfigSchema).default([]).describe('Hooks to run on session end'),
+  preToolUse: z.array(HookConfigSchema).default([]).describe('Hooks to run before tool use'),
+  postToolUse: z.array(HookConfigSchema).default([]).describe('Hooks to run after tool use'),
+  notification: z.array(HookConfigSchema).default([]).describe('Hooks to run on notifications'),
+})
+
+export type HookConfig = z.infer<typeof HookConfigSchema>
+export type HookSystemConfig = z.infer<typeof HookSystemConfigSchema>
+
+export type HookType = 'sessionStart' | 'sessionEnd' | 'preToolUse' | 'postToolUse' | 'notification'
+
+export interface HookContext {
+  safeMode?: boolean
+  permissionMode?: PermissionMode
+  toolName?: string
+  toolInput?: any
+  toolOutput?: any
+  timestamp?: number
+  sessionId?: string
 }
 
-export type HookConfig = {
-  enabled?: boolean
-  sessionStart?: Hook[]
-  sessionEnd?: Hook[]
-  preToolUse?: Hook[]
-  postToolUse?: Hook[]
-}
-
-function getConfig(): HookConfig | undefined {
-  try {
-    const cfg = getGlobalConfig()
-    return (cfg as any).hooks as HookConfig
-  } catch {
-    return undefined
+class HookSystemImpl {
+  private isEnabled(): boolean {
+    const config = getGlobalConfig()
+    return Boolean(config.hooks?.enabled)
   }
-}
 
-function shouldRun(hook: Hook, toolName?: string): boolean {
-  if (!hook) return false
-  if (!toolName || !hook.match) return true
-  try {
-    return toolName.toLowerCase().includes(hook.match.toLowerCase())
-  } catch {
-    return false
+  private getHooks(type: HookType): HookConfig[] {
+    if (!this.isEnabled()) return []
+    
+    const config = getGlobalConfig()
+    const hooks = config.hooks?.[type] || []
+    
+    return hooks.filter(hook => hook.enabled !== false)
   }
-}
 
-async function runCommand(cmd: string, timeoutMs = 3000): Promise<void> {
-  return new Promise(resolve => {
-    const child = spawn(cmd, {
-      shell: true,
-      stdio: 'ignore',
-      env: { ...process.env },
-    })
-    let timedOut = false
-    const timer = setTimeout(() => {
-      timedOut = true
+  private shouldRunHook(hook: HookConfig, context: HookContext): boolean {
+    // Check permission mode restrictions
+    if (context.permissionMode === 'plan' && !hook.match?.includes('read')) {
+      return false // In plan mode, only allow read-related hooks
+    }
+
+    // Check tool name matching
+    if (hook.match && context.toolName) {
+      const match = hook.match.toLowerCase()
+      const toolName = context.toolName.toLowerCase()
+      
+      // Support substring matching
+      if (!toolName.includes(match)) {
+        return false
+      }
+    }
+
+    return true
+  }
+
+  private async executeHook(hook: HookConfig, context: HookContext): Promise<void> {
+    if (!this.shouldRunHook(hook, context)) {
+      return
+    }
+
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        logError(`Hook timeout: ${hook.command}`)
+        resolve()
+      }, hook.timeoutMs || 5000)
+
       try {
-        child.kill('SIGKILL')
-      } catch {}
-      resolve()
-    }, timeoutMs)
-    child.on('exit', code => {
-      clearTimeout(timer)
-      debugLogger.state('HOOK_EXIT', { cmd, code: String(code), timedOut: String(timedOut) })
-      resolve()
-    })
-    child.on('error', err => {
-      clearTimeout(timer)
-      debugLogger.error('HOOK_ERROR', { cmd, error: (err as Error).message })
-      resolve()
-    })
-  })
-}
+        const env = {
+          ...process.env,
+          KODE_HOOK_TYPE: context.toolName ? 'tool' : 'session',
+          KODE_TOOL_NAME: context.toolName || '',
+          KODE_SAFE_MODE: context.safeMode ? 'true' : 'false',
+          KODE_PERMISSION_MODE: context.permissionMode || 'default',
+          KODE_TIMESTAMP: String(context.timestamp || Date.now()),
+          KODE_SESSION_ID: context.sessionId || '',
+          ...hook.env,
+        }
 
-async function runHooks(list: Hook[] | undefined, toolName?: string): Promise<void> {
-  if (!list || list.length === 0) return
-  // Run sequentially to avoid contention
-  for (const h of list) {
-    if (shouldRun(h, toolName)) {
-      await runCommand(h.command, h.timeoutMs ?? 3000)
+        const child = spawn('sh', ['-c', hook.command], {
+          env,
+          stdio: 'pipe',
+          timeout: hook.timeoutMs || 5000,
+        })
+
+        child.on('close', (code) => {
+          clearTimeout(timeout)
+          if (code !== 0) {
+            logError(`Hook failed with code ${code}: ${hook.command}`)
+          }
+          resolve()
+        })
+
+        child.on('error', (error) => {
+          clearTimeout(timeout)
+          logError(`Hook error: ${hook.command} - ${error.message}`)
+          resolve()
+        })
+
+        // Capture and log output for debugging
+        child.stdout?.on('data', (data) => {
+          if (process.env.KODE_HOOK_DEBUG) {
+            console.log(`Hook stdout: ${data.toString().trim()}`)
+          }
+        })
+
+        child.stderr?.on('data', (data) => {
+          if (process.env.KODE_HOOK_DEBUG) {
+            console.error(`Hook stderr: ${data.toString().trim()}`)
+          }
+        })
+      } catch (error) {
+        clearTimeout(timeout)
+        logError(`Hook execution error: ${hook.command} - ${error instanceof Error ? error.message : String(error)}`)
+        resolve()
+      }
+    })
+  }
+
+  async runHooks(type: HookType, context: HookContext = {}): Promise<void> {
+    if (!this.isEnabled()) return
+
+    const hooks = this.getHooks(type)
+    if (hooks.length === 0) return
+
+    // Add timestamp and session ID to context
+    const enrichedContext = {
+      ...context,
+      timestamp: context.timestamp || Date.now(),
+      sessionId: context.sessionId || process.env.KODE_SESSION_ID || 'unknown',
+    }
+
+    // Execute hooks in parallel with error isolation
+    await Promise.allSettled(
+      hooks.map(hook => this.executeHook(hook, enrichedContext))
+    )
+  }
+
+  validateConfig(config: any): { valid: boolean; errors: string[] } {
+    try {
+      HookSystemConfigSchema.parse(config)
+      return { valid: true, errors: [] }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return {
+          valid: false,
+          errors: error.errors.map(e => `${e.path.join('.')}: ${e.message}`)
+        }
+      }
+      return {
+        valid: false,
+        errors: [error instanceof Error ? error.message : String(error)]
+      }
     }
   }
 }
 
-export async function runSessionStartHooks(options?: { safeMode?: boolean; permissionMode?: string }): Promise<void> {
-  const cfg = getConfig()
-  if (!cfg?.enabled) return
-  if (options?.safeMode) return
-  await runHooks(cfg.sessionStart)
+export const HookSystem = new HookSystemImpl()
+
+// Convenience functions for common hook types
+export async function runSessionStartHooks(context: HookContext = {}): Promise<void> {
+  return HookSystem.runHooks('sessionStart', context)
 }
 
-export async function runSessionEndHooks(options?: { safeMode?: boolean; permissionMode?: string }): Promise<void> {
-  const cfg = getConfig()
-  if (!cfg?.enabled) return
-  if (options?.safeMode) return
-  await runHooks(cfg.sessionEnd)
+export async function runSessionEndHooks(context: HookContext = {}): Promise<void> {
+  return HookSystem.runHooks('sessionEnd', context)
 }
 
-export async function runPreToolHooks(toolName: string, options?: { safeMode?: boolean; permissionMode?: string }): Promise<void> {
-  const cfg = getConfig()
-  if (!cfg?.enabled) return
-  if (options?.safeMode) return
-  if (options?.permissionMode === 'plan') return
-  await runHooks(cfg.preToolUse, toolName)
+export async function runPreToolUseHooks(context: HookContext = {}): Promise<void> {
+  return HookSystem.runHooks('preToolUse', context)
 }
 
-export async function runPostToolHooks(toolName: string, options?: { safeMode?: boolean; permissionMode?: string }): Promise<void> {
-  const cfg = getConfig()
-  if (!cfg?.enabled) return
-  if (options?.safeMode) return
-  if (options?.permissionMode === 'plan') return
-  await runHooks(cfg.postToolUse, toolName)
+export async function runPostToolUseHooks(context: HookContext = {}): Promise<void> {
+  return HookSystem.runHooks('postToolUse', context)
 }
 
-export function validateHookConfig(): {
-  valid: boolean
-  errors: string[]
-  warnings: string[]
-} {
-  const result = { valid: true, errors: [] as string[], warnings: [] as string[] }
-  const cfg = getConfig()
-  if (!cfg) return result
-  if (cfg.enabled !== true) return result
-
-  const lists: Array<{ name: string; list?: Hook[] }> = [
-    { name: 'sessionStart', list: cfg.sessionStart },
-    { name: 'sessionEnd', list: cfg.sessionEnd },
-    { name: 'preToolUse', list: cfg.preToolUse },
-    { name: 'postToolUse', list: cfg.postToolUse },
-  ]
-  for (const { name, list } of lists) {
-    if (!list) continue
-    if (!Array.isArray(list)) {
-      result.valid = false
-      result.errors.push(`${name} must be an array`)
-      continue
-    }
-    list.forEach((h, idx) => {
-      if (!h || typeof h !== 'object') {
-        result.valid = false
-        result.errors.push(`${name}[${idx}] must be an object`)
-        return
-      }
-      if (!h.command || typeof h.command !== 'string') {
-        result.valid = false
-        result.errors.push(`${name}[${idx}].command is required and must be a string`)
-      }
-      if (h.timeoutMs !== undefined && (typeof h.timeoutMs !== 'number' || h.timeoutMs <= 0)) {
-        result.valid = false
-        result.errors.push(`${name}[${idx}].timeoutMs must be a positive number`)
-      }
-      if (h.match !== undefined && typeof h.match !== 'string') {
-        result.warnings.push(`${name}[${idx}].match should be a string`)
-      }
-    })
-  }
-  return result
+export async function runNotificationHooks(context: HookContext = {}): Promise<void> {
+  return HookSystem.runHooks('notification', context)
 }

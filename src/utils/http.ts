@@ -1,24 +1,93 @@
-/**
- * HTTP utility constants and helpers
- */
+import { ProxyAgent } from 'undici'
 
-import { MACRO } from '../constants/macros'
-import { PRODUCT_COMMAND } from '../constants/product'
-import { ProxyAgent, setGlobalDispatcher } from 'undici'
+let globalProxyAgent: ProxyAgent | null = null
 
-// WARNING: We rely on `claude-cli` in the user agent for log filtering.
-// Please do NOT change this without making sure that logging also gets updated!
-export const USER_AGENT = `${PRODUCT_COMMAND}/${MACRO.VERSION} (${process.env.USER_TYPE})`
+// User agent for HTTP requests
+export const USER_AGENT = 'Kode/1.1.23'
 
 /**
- * Configure undici global proxy agent from standard env vars.
- * Supports HTTP_PROXY, HTTPS_PROXY, or ALL_PROXY.
+ * Configure global HTTP proxy for all network calls
+ * This affects OpenAI, Anthropic, MCP, and other HTTP requests
  */
 export function configureHttpProxyFromEnv(): void {
-  try {
-    const proxy = process.env.ALL_PROXY || process.env.HTTPS_PROXY || process.env.HTTP_PROXY
-    if (proxy && typeof proxy === 'string' && proxy.trim()) {
-      setGlobalDispatcher(new ProxyAgent(proxy))
+  const proxyUrl = 
+    process.env.ALL_PROXY || 
+    process.env.HTTPS_PROXY || 
+    process.env.HTTP_PROXY ||
+    process.env.all_proxy ||
+    process.env.https_proxy ||
+    process.env.http_proxy
+
+  if (proxyUrl) {
+    try {
+      globalProxyAgent = new ProxyAgent(proxyUrl)
+      
+      // Set global dispatcher for undici-based requests
+      const { setGlobalDispatcher } = require('undici')
+      setGlobalDispatcher(globalProxyAgent)
+      
+      console.log(`Configured HTTP proxy: ${proxyUrl}`)
+    } catch (error) {
+      console.error(`Failed to configure proxy: ${error instanceof Error ? error.message : String(error)}`)
     }
-  } catch {}
+  }
+}
+
+/**
+ * Get the current global proxy agent
+ */
+export function getGlobalProxyAgent(): ProxyAgent | null {
+  return globalProxyAgent
+}
+
+/**
+ * Create fetch options with proxy support
+ */
+export function createFetchOptions(options: RequestInit = {}): RequestInit {
+  if (globalProxyAgent) {
+    return {
+      ...options,
+      // @ts-ignore - undici types
+      dispatcher: globalProxyAgent,
+    }
+  }
+  return options
+}
+
+/**
+ * Proxy-aware fetch function
+ */
+export async function proxyFetch(url: string | URL, options?: RequestInit): Promise<Response> {
+  const fetchOptions = createFetchOptions(options)
+  return fetch(url, fetchOptions)
+}
+
+/**
+ * Get proxy configuration for axios-style clients
+ */
+export function getProxyConfig(): { proxy?: { protocol: string; host: string; port: number } } | {} {
+  const proxyUrl = 
+    process.env.ALL_PROXY || 
+    process.env.HTTPS_PROXY || 
+    process.env.HTTP_PROXY ||
+    process.env.all_proxy ||
+    process.env.https_proxy ||
+    process.env.http_proxy
+
+  if (proxyUrl) {
+    try {
+      const url = new URL(proxyUrl)
+      return {
+        proxy: {
+          protocol: url.protocol.replace(':', ''),
+          host: url.hostname,
+          port: parseInt(url.port) || (url.protocol === 'https:' ? 443 : 80),
+        }
+      }
+    } catch (error) {
+      console.error(`Failed to parse proxy URL: ${proxyUrl}`)
+    }
+  }
+  
+  return {}
 }

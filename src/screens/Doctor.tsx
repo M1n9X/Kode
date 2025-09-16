@@ -3,7 +3,7 @@ import { Box, Text, useInput } from 'ink'
 import { getTheme } from '../utils/theme'
 // Removed autoUpdater usage; Doctor is now a simple health check
 import { PressEnterToContinue } from '../components/PressEnterToContinue'
-import { validateHookConfig } from '../services/hooks/HookSystem'
+import { HookSystem } from '../services/hooks/HookSystem'
 import { GLOBAL_CLAUDE_FILE } from '../utils/env'
 
 type Props = {

@@ -1,4 +1,4 @@
-import type { Command } from './commands'
+import type { Command } from '../commands'
 import { queryLLM } from '../services/claude'
 import { createUserMessage } from '../utils/messages'
 
