@@ -28,10 +28,16 @@ export type McpWebSocketServerConfig = {
   url: string
 }
 
+export type McpHttpServerConfig = {
+  type: 'http'
+  url: string
+}
+
 export type McpServerConfig =
   | McpStdioServerConfig
   | McpSSEServerConfig
   | McpWebSocketServerConfig
+  | McpHttpServerConfig
 
 export type ProjectConfig = {
   allowedTools: string[]

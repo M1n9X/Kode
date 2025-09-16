@@ -62,6 +62,38 @@ export const GrepTool = {
   needsPermissions({ path }) {
     return !hasReadPermission(path || getCwd())
   },
+  async validateInput({ pattern, path, include }) {
+    if (!pattern || pattern.trim() === '') {
+      return {
+        result: false,
+        message: 'Pattern is required and cannot be empty',
+      }
+    }
+    
+    // Basic regex validation
+    try {
+      new RegExp(pattern)
+    } catch (error) {
+      return {
+        result: false,
+        message: `Invalid regular expression pattern: ${error instanceof Error ? error.message : String(error)}`,
+      }
+    }
+    
+    if (path) {
+      try {
+        const absolutePath = getAbsolutePath(path)
+        await stat(absolutePath)
+      } catch {
+        return {
+          result: false,
+          message: `Path does not exist: ${path}`,
+        }
+      }
+    }
+    
+    return { result: true }
+  },
   async prompt() {
     return DESCRIPTION
   },

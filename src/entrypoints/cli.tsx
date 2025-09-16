@@ -1,7 +1,7 @@
 #!/usr/bin/env -S node --enable-source-maps
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { existsSync } from 'node:fs'
+import { existsSync, openSync } from 'node:fs'
 import { initSentry } from '../services/sentry'
 import { configureHttpProxyFromEnv } from '../utils/http'
 import { PRODUCT_COMMAND, PRODUCT_NAME } from '../constants/product'
@@ -29,15 +29,16 @@ try {
 } catch {}
 
 // Load Anthropic Node shims only where necessary (Bun on Windows)
-try {
-  if ((process as any)?.versions?.bun && process.platform === 'win32') {
-    await import('@anthropic-ai/sdk/shims/node')
-  }
-} catch {}
+;(async () => {
+  try {
+    if ((process as any)?.versions?.bun && process.platform === 'win32') {
+      await import('@anthropic-ai/sdk/shims/node')
+    }
+  } catch {}
+})()
 
 import React from 'react'
 import { ReadStream } from 'tty'
-import { openSync } from 'fs'
 // ink and REPL are imported lazily to avoid top-level awaits during module init
 import type { RenderOptions } from 'ink'
 import { addToHistory } from '../history'
@@ -61,7 +62,7 @@ import {
   validateAndRepairAllGPT5Profiles,
 } from '../utils/config'
 import { cwd } from 'process'
-import { dateToFilename, logError, parseLogFilename } from '../utils/log'
+import { dateToFilename, logError, parseLogFilename, getNextAvailableLogForkNumber, loadLogList } from '../utils/log'
 import { initDebugLogger } from '../utils/debugLogger'
 import { ApproveApiKey } from '../components/ApproveApiKey'
 import { checkHasTrustDialogAccepted, McpServerConfig } from '../utils/config'
@@ -73,7 +74,6 @@ import { env } from '../utils/env'
 import { getCwd, setCwd, setOriginalCwd } from '../utils/state'
 import { omit } from 'lodash-es'
 import { getCommands } from '../commands'
-import { getNextAvailableLogForkNumber, loadLogList } from '../utils/log'
 import { loadMessagesFromLog } from '../utils/conversationRecovery'
 import { cleanupOldMessageFilesInBackground } from '../utils/cleanup'
 import {
@@ -97,8 +97,75 @@ import { cursorShow } from 'ansi-escapes'
 import { getLatestVersion, assertMinVersion, getUpdateCommandSuggestions } from '../utils/autoUpdater'
 import { gt } from 'semver'
 import { CACHE_PATHS } from '../utils/log'
+import type { PermissionMode } from '../types/PermissionMode'
 // import { checkAndNotifyUpdate } from '../utils/autoUpdater'
 import { PersistentShell } from '../utils/PersistentShell'
+
+function getEffectivePermissionMode(
+  cliMode?: string,
+  cliSafe?: boolean,
+): PermissionMode {
+  // CLI mode takes highest priority
+  if (cliMode) {
+    switch (cliMode.toLowerCase()) {
+      case 'default':
+      case 'safe':
+        return 'default'
+      case 'accept-edits':
+      case 'acceptedits':
+      case 'edits':
+        return 'acceptEdits'
+      case 'plan':
+      case 'planning':
+      case 'readonly':
+        return 'plan'
+      case 'bypass':
+      case 'bypasspermissions':
+      case 'yolo':
+        return 'bypassPermissions'
+    }
+  }
+
+  // CLI --safe flag
+  if (cliSafe) {
+    return 'default'
+  }
+
+  // Check environment variables
+  if (process.env.KODE_DEFAULT_SAFE === 'true') {
+    return 'default'
+  }
+  
+  if (process.env.KODE_DEFAULT_MODE) {
+    const envMode = process.env.KODE_DEFAULT_MODE.toLowerCase()
+    switch (envMode) {
+      case 'default':
+      case 'safe':
+        return 'default'
+      case 'acceptedits':
+      case 'accept-edits':
+        return 'acceptEdits'
+      case 'plan':
+        return 'plan'
+      case 'bypass':
+      case 'yolo':
+        return 'bypassPermissions'
+    }
+  }
+
+  // Check global config
+  const globalConfig = getGlobalConfig()
+  if (globalConfig.defaultSafeMode) {
+    return 'default'
+  }
+  
+  if (globalConfig.defaultPermissionMode) {
+    return globalConfig.defaultPermissionMode
+  }
+
+  // Default to bypassPermissions (YOLO mode)
+  return 'bypassPermissions'
+}
 // Vendor beta gates removed
 import { clearTerminal } from '../utils/terminal'
 import { showInvalidConfigDialog } from '../components/InvalidConfigDialog'
@@ -404,28 +471,10 @@ ${commandList}`,
     .action(
       async (prompt, { cwd, debug, verbose, enableArchitect, print, safe, mode }) => {
         const config = getGlobalConfig()
-        const normalizeMode = (m?: string) => {
-          const v = (m || '').toLowerCase()
-          switch (v) {
-            case 'accept-edits':
-            case 'acceptedits':
-              return 'acceptEdits' as const
-            case 'plan':
-              return 'plan' as const
-            case 'bypass':
-            case 'bypass-permissions':
-              return 'bypassPermissions' as const
-            case 'default':
-            default:
-              return 'default' as const
-          }
-        }
 
         const effectiveSafe =
           typeof safe === 'boolean' ? safe : Boolean(config.defaultSafeMode)
-        const effectiveMode = normalizeMode(
-          mode ?? (config.defaultPermissionMode as string | undefined) ?? 'default',
-        )
+        const effectiveMode = getEffectivePermissionMode(mode, safe)
 
         await showSetupScreens(effectiveSafe, print)
         
@@ -1548,7 +1597,7 @@ ${commandList}`,
               commands={commands}
               tools={tools}
               safeMode={safe}
-              initialPermissionMode={(mode && mode.toLowerCase().startsWith('accept')) ? 'acceptEdits' : (mode === 'plan' ? 'plan' : (mode === 'bypass' ? 'bypassPermissions' : 'default'))}
+              initialPermissionMode={getEffectivePermissionMode(mode, safe)}
               initialMessages={messages}
               mcpClients={mcpClients}
               isDefaultModel={isDefaultModel}

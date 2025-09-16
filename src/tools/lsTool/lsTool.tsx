@@ -48,6 +48,23 @@ export const LSTool = {
   async prompt() {
     return DESCRIPTION
   },
+  async validateInput({ path }) {
+    if (!path) {
+      return {
+        result: false,
+        message: 'Path is required',
+      }
+    }
+    
+    if (!isAbsolute(path)) {
+      return {
+        result: false,
+        message: 'Path must be absolute',
+      }
+    }
+    
+    return { result: true }
+  },
   renderResultForAssistant(data) {
     return data
   },

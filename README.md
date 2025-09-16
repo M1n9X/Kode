@@ -224,16 +224,26 @@ As long as you have an openai-like endpoint, it should work.
 
 Kode both runs as an MCP client and can expose its own tools as an MCP server for other apps (e.g., Claude Desktop).
 
+#### Supported Transport Types
+- **stdio**: Standard input/output communication (most common)
+- **sse**: Server-Sent Events over HTTP
+- **http**: HTTP-based communication  
+- **ws**: WebSocket connections
+
+#### MCP Client Commands
 - List configured servers: `kode mcp list`
 - Add stdio server: `kode mcp add <name> <command> [args...]`
 - Add SSE server: `kode mcp add <name> <url>`
-- Add WebSocket server: `kode mcp add-ws <name> <ws://url>` (or via JSON type `ws`)
+- Add HTTP server: `kode mcp add-http <name> <http://url>`
+- Add WebSocket server: `kode mcp add-ws <name> <ws://url>`
 - Add from JSON: `kode mcp add-json <name> '{"type": "sse", "url": "https://example"}'`
 - Show details: `kode mcp get <name>`
 - Remove server: `kode mcp remove <name>`
-- Import from Claude Desktop: `kode mcp add-from-claude-desktop`
+- Import from Claude Desktop: `kode mcp import-desktop`
+- Health check all servers: `kode mcp health`
+
+#### MCP Server Mode
 - Start Kode as an MCP server (stdio): `kode mcp serve`
-- Health check: `kode mcp health`
 
 To connect Kode to Claude Desktop, add an entry to Claude Desktop’s config under `mcpServers`:
 
@@ -474,28 +484,55 @@ bun test
 
 ### Safe Mode and Permissions
 
-Kode defaults to a permissive “YOLO” mode to maximize productivity. For sensitive work, enable safe mode to require approvals for tool actions:
+Kode defaults to a permissive "YOLO" mode to maximize productivity. For sensitive work, enable safe mode to require approvals for tool actions:
 
 ```bash
 kode --safe
 ```
 
-You can also select a permission mode per run:
+#### Permission Modes
+
+You can select different permission modes to control tool access:
 
 ```bash
-# Read-only planning (blocks write tools)
+# Read-only planning mode (blocks all write operations)
 kode --mode plan
 
-# Auto-approve edits while keeping prompts gated for other tools
-kode --mode accept-edits --safe
+# Auto-approve file edits while prompting for shell/network tools  
+kode --mode acceptEdits
 
-# Fully bypass checks (equivalent to YOLO)
-kode --mode bypass
+# Fully bypass all permission checks (default YOLO mode)
+kode --mode bypassPermissions
+
+# Standard safe mode with manual approval for all tools
+kode --safe
+```
+
+#### Mode Switching During Session
+
+You can change permission modes without restarting:
+
+```bash
+# In REPL, use the /mode command
+/mode plan          # Switch to read-only mode
+/mode acceptEdits   # Allow edits, prompt for other tools
+/mode safe          # Enable full safe mode
+/mode yolo          # Return to permissive mode
+```
+
+#### Default Security Policy
+
+Configure your preferred default mode via environment variable:
+
+```bash
+export KODE_DEFAULT_SAFE=true    # Start in safe mode by default
+export KODE_DEFAULT_MODE=plan    # Start in planning mode by default
 ```
 
 Notes:
 - `--mode` controls high-level behavior; combine with `--safe` to enforce confirmations for non-edit tools.
-- When unset, mode is `default`.
+- Permission settings are displayed in the REPL status line for visibility.
+- When unset, mode defaults to `bypassPermissions` (YOLO).
 
 ### Proxy and Platform Notes
 

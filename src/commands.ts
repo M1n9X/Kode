@@ -21,6 +21,7 @@ import releaseNotes from './commands/release-notes'
 import review from './commands/review'
 import terminalSetup from './commands/terminalSetup'
 import plan_review from './commands/plan_review'
+import mode from './commands/mode'
 import { Tool, ToolUseContext } from './Tool'
 import resume from './commands/resume'
 import agents from './commands/agents'
@@ -91,6 +92,7 @@ const COMMANDS = memoize((): Command[] => [
   help,
   init,
   mcp,
+  mode,
   model as unknown as Command,
   modelstatus,
   onboarding,

@@ -265,7 +265,10 @@ async function connectToServer(
   // Choose transport with HTTP fallback for SSE-style URLs
   let transport: StdioClientTransport | SSEClientTransport | StreamableHTTPClientTransport | any
 
-  if (serverRef.type === 'sse') {
+  if (serverRef.type === 'http') {
+    // Direct HTTP transport
+    transport = new StreamableHTTPClientTransport(new URL(serverRef.url))
+  } else if (serverRef.type === 'sse') {
     const baseUrl = new URL(serverRef.url)
     // Try Streamable HTTP first, then fall back to SSE
     try {

@@ -48,6 +48,23 @@ export const GlobTool = {
   needsPermissions({ path }) {
     return !hasReadPermission(path || getCwd())
   },
+  async validateInput({ pattern, path }) {
+    if (!pattern || pattern.trim() === '') {
+      return {
+        result: false,
+        message: 'Pattern is required and cannot be empty',
+      }
+    }
+    
+    if (path && !isAbsolute(path)) {
+      return {
+        result: false,
+        message: 'Path must be absolute when provided',
+      }
+    }
+    
+    return { result: true }
+  },
   async prompt() {
     return DESCRIPTION
   },
