@@ -10,6 +10,10 @@
     "node": ">=20.18.1"
   },
   "main": "cli.js",
+  "exports": {
+    ".": "./cli.js",
+    "./sdk": "./dist/sdk/index.js"
+  },
   "author": "ShareAI-lab <ai-lab@foxmail.com>",
   "license": "Apache-2.0",
   "description": "AI-powered terminal assistant that understands your codebase, edits files, runs commands, and automates development workflows.",

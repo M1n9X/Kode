@@ -1709,3 +1709,11 @@ function resetCursor() {
 }
 
 main()
+  config
+    .command('path')
+    .description('Show the path of the active global config file')
+    .action(async () => {
+      const { GLOBAL_CLAUDE_FILE } = await import('../utils/env.js')
+      console.log(String(GLOBAL_CLAUDE_FILE))
+      process.exit(0)
+    })
