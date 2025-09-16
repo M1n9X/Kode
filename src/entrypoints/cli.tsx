@@ -651,6 +651,26 @@ ${commandList}`,
     })
 
   mcp
+    .command('add-ws <name> <url>')
+    .description('Add a WebSocket server (ws:// or wss://)')
+    .option(
+      '-s, --scope <scope>',
+      'Configuration scope (project or global)',
+      'project',
+    )
+    .action(async (name, url, options) => {
+      try {
+        const scope = ensureConfigScope(options.scope)
+        addMcpServer(name, { type: 'ws', url }, scope)
+        console.log(`Added WS MCP server ${name} with URL ${url} to ${scope} config`)
+        process.exit(0)
+      } catch (error) {
+        console.error((error as Error).message)
+        process.exit(1)
+      }
+    })
+
+  mcp
     .command('add [name] [commandOrUrl] [args...]')
     .description('Add a server (run without arguments for interactive wizard)')
     .option(
@@ -834,8 +854,10 @@ ${commandList}`,
       for (const { name, scope, server } of scoped) {
         if (server.type === 'sse') {
           console.log(`${name} [${scope}]: ${server.url} (SSE/HTTP)`) 
+        } else if ((server as any).type === 'ws') {
+          console.log(`${name} [${scope}]: ${(server as any).url} (WS)`) 
         } else {
-          console.log(`${name} [${scope}]: ${server.command} ${(server.args || []).join(' ')}`)
+          console.log(`${name} [${scope}]: ${(server as any).command} ${((server as any).args || []).join(' ')}`)
         }
       }
       process.exit(0)
@@ -894,15 +916,12 @@ ${commandList}`,
         }
 
         // Validate the server config
-        if (
-          !serverConfig.type ||
-          !['stdio', 'sse'].includes(serverConfig.type)
-        ) {
-          console.error('Error: Server type must be "stdio" or "sse"')
+        if (!serverConfig.type || !['stdio', 'sse', 'ws'].includes(serverConfig.type)) {
+          console.error('Error: Server type must be "stdio", "sse" or "ws"')
           process.exit(1)
         }
 
-        if (serverConfig.type === 'sse' && !serverConfig.url) {
+        if ((serverConfig.type === 'sse' || serverConfig.type === 'ws') && !serverConfig.url) {
           console.error('Error: SSE server must have a URL')
           process.exit(1)
         }

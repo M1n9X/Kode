@@ -308,6 +308,55 @@ bun test
 ./cli.js --help
 ```
 
+### MCP 服务器（Model Context Protocol）
+
+- 列出服务器：`kode mcp list`
+- 添加 SSE 服务器：`kode mcp add <name> <url>`
+- 添加 WebSocket 服务器：`kode mcp add-ws <name> <ws://url>`（或通过 JSON 类型 `ws`）
+- 通过 JSON 添加：`kode mcp add-json <name> '{"type": "sse", "url": "https://example"}'`
+- 查看详情：`kode mcp get <name>`
+- 启动 Kode 作为 MCP 服务器（stdio）：`kode mcp serve`
+- 健康检查：`kode mcp health`
+
+将 Kode 连接到 Claude Desktop：在其配置 `mcpServers` 中添加条目（使用 `which kode`/`where kode` 找到路径）。
+
+### 模型命令
+
+- 列出指针与模型：`kode models list`
+- 设置指针：`kode models use <main|task|reasoning|quick> <model>`
+- 校验/修复 GPT‑5 模型配置：`kode models validate` / `kode models repair`
+
+### 计划评审
+
+- 评审多步骤计划并获得结构化反馈：`/plan-review <plan>`
+- 在 plan 模式下，TaskTool 会在执行前自动进行轻量评审并展示摘要。
+
+### 代理
+
+Kode 使用 undici 全局代理，支持标准环境变量：
+
+```bash
+export ALL_PROXY="http://127.0.0.1:7890"
+# 或
+export HTTPS_PROXY="http://127.0.0.1:7890"
+export HTTP_PROXY="http://127.0.0.1:7890"
+```
+
+### Hook（实验性）
+
+在 `~/.kode.json` 配置生命周期钩子（默认关闭）：
+
+```json
+{
+  "hooks": {
+    "enabled": true,
+    "sessionStart": [{ "command": "echo start", "timeoutMs": 1500 }],
+    "preToolUse": [{ "match": "Bash", "command": "echo pre-bash" }],
+    "postToolUse": [{ "match": "View", "command": "echo viewed" }]
+  }
+}
+```
+
 ## 贡献
 
 我们欢迎贡献！请查看我们的[贡献指南](CONTRIBUTING.md)了解详情。

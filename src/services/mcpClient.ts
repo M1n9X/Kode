@@ -263,7 +263,7 @@ async function connectToServer(
   serverRef: McpServerConfig,
 ): Promise<Client> {
   // Choose transport with HTTP fallback for SSE-style URLs
-  let transport: StdioClientTransport | SSEClientTransport | StreamableHTTPClientTransport
+  let transport: StdioClientTransport | SSEClientTransport | StreamableHTTPClientTransport | any
 
   if (serverRef.type === 'sse') {
     const baseUrl = new URL(serverRef.url)
@@ -281,6 +281,25 @@ async function connectToServer(
     } catch {
       // Fall back to SSE transport
       transport = new SSEClientTransport(baseUrl)
+    }
+  } else if (serverRef.type === 'ws') {
+    // Best-effort WebSocket support via dynamic import to avoid hard build dependency
+    try {
+      // Some SDK versions export a WebSocket client transport
+      const mod: any = await import('@modelcontextprotocol/sdk/client/websocket.js')
+      if (mod && mod.WebSocketClientTransport) {
+        const wsTransport = new mod.WebSocketClientTransport(new URL(serverRef.url))
+        const client = new Client(
+          { name: PRODUCT_COMMAND, version: '0.1.0' },
+          { capabilities: {} },
+        )
+        await client.connect(wsTransport)
+        return client
+      } else {
+        throw new Error('WebSocket transport not available in SDK')
+      }
+    } catch (err) {
+      throw new Error(`WebSocket connection not supported: ${(err as Error).message}`)
     }
   } else {
     transport = new StdioClientTransport({

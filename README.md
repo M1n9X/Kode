@@ -227,6 +227,7 @@ Kode both runs as an MCP client and can expose its own tools as an MCP server fo
 - List configured servers: `kode mcp list`
 - Add stdio server: `kode mcp add <name> <command> [args...]`
 - Add SSE server: `kode mcp add <name> <url>`
+- Add WebSocket server: `kode mcp add-ws <name> <ws://url>` (or via JSON type `ws`)
 - Add from JSON: `kode mcp add-json <name> '{"type": "sse", "url": "https://example"}'`
 - Show details: `kode mcp get <name>`
 - Remove server: `kode mcp remove <name>`
@@ -249,6 +250,43 @@ To connect Kode to Claude Desktop, add an entry to Claude Desktop’s config und
 ```
 
 Find the path with `which kode` (macOS/Linux) or `where kode` (Windows). You can also reset local project-scoped approvals any time: `kode mcp reset-project-choices`.
+
+### Models CLI
+
+- List pointers and profiles: `kode models list`
+- Set pointer: `kode models use <main|task|reasoning|quick> <model>`
+- Validate/repair GPT‑5 profiles: `kode models validate` / `kode models repair`
+
+### Plan Review
+
+- Review a multi-step plan and get structured feedback: `/plan-review <plan>`
+- In plan mode, TaskTool auto-runs a quick plan review before execution and shows a summary.
+
+### Proxy
+
+Kode honors standard proxy env vars via a global undici dispatcher:
+
+```bash
+export ALL_PROXY="http://127.0.0.1:7890"
+# or
+export HTTPS_PROXY="http://127.0.0.1:7890"
+export HTTP_PROXY="http://127.0.0.1:7890"
+```
+
+### Hooks (Experimental)
+
+Configure lifecycle hooks in `~/.kode.json` (default disabled):
+
+```json
+{
+  "hooks": {
+    "enabled": true,
+    "sessionStart": [{ "command": "echo start", "timeoutMs": 1500 }],
+    "preToolUse": [{ "match": "Bash", "command": "echo pre-bash" }],
+    "postToolUse": [{ "match": "View", "command": "echo viewed" }]
+  }
+}
+```
 
 ### Commands
 
