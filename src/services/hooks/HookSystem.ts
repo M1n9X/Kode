@@ -97,3 +97,47 @@ export async function runPostToolHooks(toolName: string): Promise<void> {
   await runHooks(cfg.postToolUse, toolName)
 }
 
+export function validateHookConfig(): {
+  valid: boolean
+  errors: string[]
+  warnings: string[]
+} {
+  const result = { valid: true, errors: [] as string[], warnings: [] as string[] }
+  const cfg = getConfig()
+  if (!cfg) return result
+  if (cfg.enabled !== true) return result
+
+  const lists: Array<{ name: string; list?: Hook[] }> = [
+    { name: 'sessionStart', list: cfg.sessionStart },
+    { name: 'sessionEnd', list: cfg.sessionEnd },
+    { name: 'preToolUse', list: cfg.preToolUse },
+    { name: 'postToolUse', list: cfg.postToolUse },
+  ]
+  for (const { name, list } of lists) {
+    if (!list) continue
+    if (!Array.isArray(list)) {
+      result.valid = false
+      result.errors.push(`${name} must be an array`)
+      continue
+    }
+    list.forEach((h, idx) => {
+      if (!h || typeof h !== 'object') {
+        result.valid = false
+        result.errors.push(`${name}[${idx}] must be an object`)
+        return
+      }
+      if (!h.command || typeof h.command !== 'string') {
+        result.valid = false
+        result.errors.push(`${name}[${idx}].command is required and must be a string`)
+      }
+      if (h.timeoutMs !== undefined && (typeof h.timeoutMs !== 'number' || h.timeoutMs <= 0)) {
+        result.valid = false
+        result.errors.push(`${name}[${idx}].timeoutMs must be a positive number`)
+      }
+      if (h.match !== undefined && typeof h.match !== 'string') {
+        result.warnings.push(`${name}[${idx}].match should be a string`)
+      }
+    })
+  }
+  return result
+}

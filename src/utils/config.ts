@@ -191,6 +191,7 @@ export type GlobalConfig = {
 
   // Optional status line (experimental)
   statusLineEnabled?: boolean
+  planStrictValidation?: boolean
 }
 
 export const DEFAULT_GLOBAL_CONFIG: GlobalConfig = {
@@ -220,6 +221,7 @@ export const DEFAULT_GLOBAL_CONFIG: GlobalConfig = {
   },
   lastDismissedUpdateVersion: undefined,
   statusLineEnabled: false,
+  planStrictValidation: false,
 }
 
 export const GLOBAL_CONFIG_KEYS = [
@@ -237,6 +239,7 @@ export const GLOBAL_CONFIG_KEYS = [
   'defaultSafeMode',
   'defaultPermissionMode',
   'statusLineEnabled',
+  'planStrictValidation',
 ] as const
 
 export type GlobalConfigKey = (typeof GLOBAL_CONFIG_KEYS)[number]

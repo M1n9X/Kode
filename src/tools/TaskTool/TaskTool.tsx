@@ -190,10 +190,33 @@ export const TaskTool = {
           .map(b => (b as any).text)
           .join('\n')
         let summary = 'Plan review ready.'
-        try {
-          const parsed = JSON.parse(reviewText)
-          if (parsed?.summary) summary = parsed.summary
-        } catch {}
+        let parsed: any = null
+        try { parsed = JSON.parse(reviewText) } catch {}
+        if (parsed?.summary) summary = parsed.summary
+
+        // Strict gating (opt-in via config)
+        const { getGlobalConfig } = await import('../../utils/config')
+        const cfg = getGlobalConfig()
+        const strict = Boolean(cfg.planStrictValidation)
+        if (strict && parsed) {
+          const scores = parsed.scores || {}
+          const badScore = [scores.structure, scores.completeness, scores.clarity]
+            .some((n: any) => typeof n === 'number' && n < 5)
+          const hasCritical = Array.isArray(parsed.issues) && parsed.issues.some((i: any) =>
+            i?.type === 'risky_step' || i?.type === 'rollback' || i?.type === 'security'
+          )
+          if (badScore || hasCritical) {
+            const reason = hasCritical ? 'critical issues detected' : 'low plan scores'
+            const message = `Plan blocked by strict validation (${reason}). Please refine the plan or disable strict mode.`
+            yield {
+              type: 'result',
+              data: [{ type: 'text', text: message }] as any,
+              resultForAssistant: message,
+            }
+            return
+          }
+        }
+
         yield {
           type: 'progress',
           content: createAssistantMessage(`Plan review: ${summary}`),
