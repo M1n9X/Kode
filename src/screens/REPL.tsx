@@ -69,6 +69,7 @@ import { getMaxThinkingTokens } from '../utils/thinking'
 import { getOriginalCwd } from '../utils/state'
 import { handleHashCommand } from '../commands/terminalSetup'
 import { debug as debugLogger } from '../utils/debugLogger'
+import { runSessionStartHooks, runSessionEndHooks } from '../services/hooks/HookSystem'
 
 type Props = {
   commands: Command[]
@@ -118,6 +119,14 @@ export function REPL({
 }: Props): React.ReactNode {
   // Cache verbose config to avoid synchronous file reads on every render
   const [verboseConfig] = useState(() => verboseFromCLI ?? getGlobalConfig().verbose)
+
+  // Session lifecycle hooks (optional; default disabled via config)
+  useEffect(() => {
+    runSessionStartHooks().catch(() => {})
+    return () => {
+      runSessionEndHooks().catch(() => {})
+    }
+  }, [])
   const verbose = verboseConfig
 
   // Used to force the logo to re-render and conversation log to use a new file

@@ -167,12 +167,19 @@ export type GlobalConfig = {
   proxy?: string
   stream?: boolean
 
+  // Default permission posture
+  defaultSafeMode?: boolean
+  defaultPermissionMode?: 'default' | 'acceptEdits' | 'plan' | 'bypassPermissions'
+
   // New model system
   modelProfiles?: ModelProfile[] // Model configuration list
   modelPointers?: ModelPointers // Model pointer system
   defaultModelName?: string // Default model
   // Update notifications
   lastDismissedUpdateVersion?: string
+
+  // Optional hook system configuration (experimental, default disabled)
+  hooks?: import('../services/hooks/HookSystem').HookConfig
 }
 
 export const DEFAULT_GLOBAL_CONFIG: GlobalConfig = {
@@ -187,6 +194,10 @@ export const DEFAULT_GLOBAL_CONFIG: GlobalConfig = {
     rejected: [],
   },
   stream: true,
+
+  // Permission posture defaults
+  defaultSafeMode: false,
+  defaultPermissionMode: 'default',
 
   // New model system defaults
   modelProfiles: [],
@@ -211,6 +222,8 @@ export const GLOBAL_CONFIG_KEYS = [
   'preferredNotifChannel',
   'shiftEnterKeyBindingInstalled',
   'maxTokens',
+  'defaultSafeMode',
+  'defaultPermissionMode',
 ] as const
 
 export type GlobalConfigKey = (typeof GLOBAL_CONFIG_KEYS)[number]

@@ -172,6 +172,37 @@ export const TaskTool = {
       tools,
     }
 
+    // Optional plan review in plan mode (non-blocking)
+    try {
+      const permissionMode = (arguments?.[1] as any)?.options?.permissionMode
+      if (permissionMode === 'plan') {
+        const { PROMPT: PLAN_PROMPT } = await import('../PlanReviewTool/prompt')
+        const reviewResp = await queryLLM(
+          [createUserMessage(effectivePrompt)],
+          [PLAN_PROMPT],
+          0,
+          [],
+          abortController.signal,
+          { safeMode: false, model: 'main', prependCLISysprompt: false },
+        )
+        const reviewText = (reviewResp.message.content || [])
+          .filter(b => b.type === 'text')
+          .map(b => (b as any).text)
+          .join('\n')
+        let summary = 'Plan review ready.'
+        try {
+          const parsed = JSON.parse(reviewText)
+          if (parsed?.summary) summary = parsed.summary
+        } catch {}
+        yield {
+          type: 'progress',
+          content: createAssistantMessage(`Plan review: ${summary}`),
+          normalizedMessages: normalizeMessages(messages),
+          tools,
+        }
+      }
+    } catch {}
+
     const [taskPrompt, context, maxThinkingTokens] = await Promise.all([
       getAgentPrompt(),
       getContext(),

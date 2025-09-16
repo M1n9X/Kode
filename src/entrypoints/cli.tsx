@@ -400,20 +400,7 @@ ${commandList}`,
     )
     .action(
       async (prompt, { cwd, debug, verbose, enableArchitect, print, safe, mode }) => {
-        await showSetupScreens(safe, print)
-        
-        await setup(cwd, safe)
-
-        assertMinVersion()
-
-        const [tools, mcpClients] = await Promise.all([
-          getTools(
-            enableArchitect ?? getCurrentProjectConfig().enableArchitectTool,
-          ),
-          getClients(),
-        ])
-        // logStartup()
-        const inputPrompt = [prompt, stdinContent].filter(Boolean).join('\n')
+        const config = getGlobalConfig()
         const normalizeMode = (m?: string) => {
           const v = (m || '').toLowerCase()
           switch (v) {
@@ -431,6 +418,27 @@ ${commandList}`,
           }
         }
 
+        const effectiveSafe =
+          typeof safe === 'boolean' ? safe : Boolean(config.defaultSafeMode)
+        const effectiveMode = normalizeMode(
+          mode ?? (config.defaultPermissionMode as string | undefined) ?? 'default',
+        )
+
+        await showSetupScreens(effectiveSafe, print)
+        
+        await setup(cwd, effectiveSafe)
+
+        assertMinVersion()
+
+        const [tools, mcpClients] = await Promise.all([
+          getTools(
+            enableArchitect ?? getCurrentProjectConfig().enableArchitectTool,
+          ),
+          getClients(),
+        ])
+        // logStartup()
+        const inputPrompt = [prompt, stdinContent].filter(Boolean).join('\n')
+
         if (print) {
           if (!inputPrompt) {
             console.error(
@@ -447,7 +455,7 @@ ${commandList}`,
             prompt: inputPrompt,
             cwd,
             tools,
-            safeMode: safe,
+            safeMode: effectiveSafe,
           })
           console.log(response)
           process.exit(0)
@@ -478,8 +486,8 @@ ${commandList}`,
               shouldShowPromptInput={true}
               verbose={verbose}
               tools={tools}
-              safeMode={safe}
-              initialPermissionMode={normalizeMode(mode)}
+              safeMode={effectiveSafe}
+              initialPermissionMode={effectiveMode}
               mcpClients={mcpClients}
               isDefaultModel={isDefaultModel}
               initialUpdateVersion={updateInfo.version}

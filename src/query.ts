@@ -618,6 +618,11 @@ async function* checkPermissionsAndCallTool(
 
   // Call the tool
   try {
+    // Pre-tool hooks (best effort)
+    try {
+      const { runPreToolHooks } = await import('./services/hooks/HookSystem')
+      await runPreToolHooks(tool.name)
+    } catch {}
     const generator = tool.call(normalizedInput as never, context)
     for await (const result of generator) {
       switch (result.type) {
@@ -636,6 +641,11 @@ async function* checkPermissionsAndCallTool(
               resultForAssistant: result.resultForAssistant || String(result.data),
             },
           )
+          // Post-tool hooks (best effort)
+          try {
+            const { runPostToolHooks } = await import('./services/hooks/HookSystem')
+            await runPostToolHooks(tool.name)
+          } catch {}
           return
         case 'progress':
           
