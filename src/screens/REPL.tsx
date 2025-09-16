@@ -69,6 +69,7 @@ import { getMaxThinkingTokens } from '../utils/thinking'
 import { getOriginalCwd } from '../utils/state'
 import { handleHashCommand } from '../commands/terminalSetup'
 import { debug as debugLogger } from '../utils/debugLogger'
+import StatusLine from '../components/StatusLine'
 import { runSessionStartHooks, runSessionEndHooks } from '../services/hooks/HookSystem'
 
 type Props = {
@@ -119,6 +120,8 @@ export function REPL({
 }: Props): React.ReactNode {
   // Cache verbose config to avoid synchronous file reads on every render
   const [verboseConfig] = useState(() => verboseFromCLI ?? getGlobalConfig().verbose)
+  // Optional status line controlled via config.statusLineEnabled
+  const [showStatusLine] = useState(() => Boolean(getGlobalConfig().statusLineEnabled))
 
   // Session lifecycle hooks (optional; default disabled via config)
   useEffect(() => {
@@ -736,6 +739,11 @@ export function REPL({
                 abortController={abortController}
                 onModelChange={() => setForkNumber(prev => prev + 1)}
               />
+              {showStatusLine && (
+                <Box marginTop={1}>
+                  <StatusLine safeMode={safeMode} permissionMode={initialPermissionMode} />
+                </Box>
+              )}
             </>
           )}
       </Box>

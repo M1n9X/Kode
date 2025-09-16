@@ -188,6 +188,9 @@ export type GlobalConfig = {
 
   // Optional hook system configuration (experimental, default disabled)
   hooks?: import('../services/hooks/HookSystem').HookConfig
+
+  // Optional status line (experimental)
+  statusLineEnabled?: boolean
 }
 
 export const DEFAULT_GLOBAL_CONFIG: GlobalConfig = {
@@ -216,6 +219,7 @@ export const DEFAULT_GLOBAL_CONFIG: GlobalConfig = {
     quick: '',
   },
   lastDismissedUpdateVersion: undefined,
+  statusLineEnabled: false,
 }
 
 export const GLOBAL_CONFIG_KEYS = [
@@ -232,6 +236,7 @@ export const GLOBAL_CONFIG_KEYS = [
   'maxTokens',
   'defaultSafeMode',
   'defaultPermissionMode',
+  'statusLineEnabled',
 ] as const
 
 export type GlobalConfigKey = (typeof GLOBAL_CONFIG_KEYS)[number]
